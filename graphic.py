@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 from datetime import datetime
 
 
@@ -9,11 +9,12 @@ def remove_dashes_line(ax, color):
             if child.get_color() == color:
                 child.remove()
 
+
 def plot_point(ax, point, color, label):
     if point:
         point_time = datetime.strptime(point['closing_time'], '%Y-%m-%d %H:%M:%S')
         point_price = point['price']
-        
+
         ax.plot(point_time, point_price, color[0] + 'o', label=label, markersize=8)
         label_point = label.split(' ', 1)[0]
         ax.text(point_time, point_price, f'{label_point}: {point_price}', fontsize=8, verticalalignment='bottom')
@@ -23,6 +24,7 @@ def plot_point(ax, point, color, label):
 
         # Draw the horizontal line
         ax.axhline(y=point_price, color=color, linestyle='--', linewidth=0.8)
+
 
 def initialize_plot():
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -53,7 +55,7 @@ def update_plot(line, new_point, high_point=None, low_point=None, mid_point=None
 
     # Update line
     line.set_data(x_data, y_data)
-    
+
     # Keep axis constraints for automatic scaling
     ax = line.axes
     ax.relim()
@@ -62,7 +64,8 @@ def update_plot(line, new_point, high_point=None, low_point=None, mid_point=None
     # Remove all previous text labels
     for child in ax.get_children():
         if isinstance(child, plt.Text):
-            if child.get_text().startswith("High:") or child.get_text().startswith("Low:") or child.get_text().startswith("Mid:"):
+            if child.get_text().startswith("High:") or child.get_text().startswith(
+                    "Low:") or child.get_text().startswith("Mid:"):
                 child.remove()
 
     # Show high low and mid points
