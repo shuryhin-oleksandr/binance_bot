@@ -25,12 +25,23 @@ def plot_point(ax, point, color, label):
         # Draw the horizontal line
         ax.axhline(y=point_price, color=color, linestyle='--', linewidth=0.8)
 
+def is_mid_point_label_present(ax):
+    for child in ax.get_children():
+        if isinstance(child, plt.Text) and child.get_text().startswith("Mid:"):
+            return True
+    return False
+
+def clear_old_labels(ax):
+    for child in ax.get_children():
+        if isinstance(child, plt.Text):
+            if child.get_text().startswith("High:") or child.get_text().startswith("Low:"):
+                child.remove()
 
 def initialize_plot():
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
     ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=90)
 
     plt.xlabel('Closing Time')
     plt.ylabel('Price')
@@ -50,10 +61,18 @@ def update_plot(line, new_point, high_point=None, low_point=None, mid_point=None
     y_data = line.get_ydata()
 
     # Add new data
-    x_data = list(x_data) + [datetime.strptime(new_point['closing_time'], '%Y-%m-%d %H:%M:%S')]
-    y_data = list(y_data) + [new_point['price']]
+    new_time = datetime.strptime(new_point['closing_time'], '%Y-%m-%d %H:%M:%S')
+    new_price = new_point['price']
+    
+    if mid_point and len(x_data) > 0:
+        last_time = x_data[-1]
+        last_price = y_data[-1]
+        ax = line.axes
+        ax.plot([last_time, new_time], [last_price, new_price], 'yo-', markersize=5)  # Yellow line for new segment
 
-    # Update line
+    # Otherwise, extend the blue line
+    x_data = list(x_data) + [new_time]
+    y_data = list(y_data) + [new_price]
     line.set_data(x_data, y_data)
 
     # Keep axis constraints for automatic scaling
@@ -61,17 +80,14 @@ def update_plot(line, new_point, high_point=None, low_point=None, mid_point=None
     ax.relim()
     ax.autoscale_view()
 
-    # Remove all previous text labels
-    for child in ax.get_children():
-        if isinstance(child, plt.Text):
-            if child.get_text().startswith("High:") or child.get_text().startswith(
-                    "Low:") or child.get_text().startswith("Mid:"):
-                child.remove()
+    clear_old_labels(ax)
 
     # Show high low and mid points
     plot_point(ax, high_point, 'green', 'High Point (Rise X%)')
     plot_point(ax, low_point, 'red', 'Low Point (Drop by Y%)')
-    plot_point(ax, mid_point, 'yellow', 'Mid Point')
+
+    if mid_point and not is_mid_point_label_present(ax):
+        plot_point(ax, mid_point, 'yellow', 'Mid Point')
 
     plt.draw()
     plt.pause(0.001)
