@@ -90,4 +90,4 @@ def update_plot(line, new_point, high_point=None, low_point=None, mid_point=None
         plot_point(ax, mid_point, 'yellow', 'Mid Point')
 
     plt.draw()
-    plt.pause(0.001)
+    plt.pause(0.0001)

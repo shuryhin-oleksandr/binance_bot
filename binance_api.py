@@ -1,13 +1,13 @@
 import requests
+from db import save_klines
 
 BINANCE_API_URL = 'https://api.binance.com/api/v3/klines'
 SYMBOL = 'BTCUSDT'
 INTERVAL = "1m"
 LIMIT = 1000
 
-def get_all_klines(start_time, end_time):
+def get_and_save_all_klines(start_time, end_time):
     """Get all candlestick data for a year by requesting in chunks of 1000."""
-    all_klines = []
     current_time = start_time
 
     while current_time < end_time:
@@ -16,11 +16,11 @@ def get_all_klines(start_time, end_time):
         
         if not klines:
             break
-        
-        all_klines.extend(klines)
+
+        save_klines(klines)
         current_time = klines[-1][6] + 1
 
-    return all_klines
+    return True
 
 
 def get_klines(start_time, end_time):

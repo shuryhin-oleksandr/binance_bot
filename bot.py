@@ -1,11 +1,12 @@
 
 import math
 import time
+import sys
 import argparse
 from graphic import initialize_plot, update_plot
-from db import find_klines_near_close_time, get_min_price_in_range, save_klines
+from db import find_klines_in_range, get_min_price_in_range
 from utils import get_unix_timestamp, convert_unix_to_str, show_high_point, show_low_point
-from binance_api import get_all_klines
+from binance_api import get_and_save_all_klines
 
 TIME_STEP = 1 * 60 * 1000 # one minute in unix
 
@@ -24,33 +25,25 @@ def is_low_point(point):
         return True
 
 
-def check_price(time_window, end_time, percent_rised, percent_drop):
+def check_price(kline, time_window, percent_rised, percent_drop):
     global high_point, low_point, mid_point
-    klines_start_time = time.time()
-    kline = find_klines_near_close_time(end_time, 59000)
-    klines_end_time = time.time()
-    print(f"Time for find klines: {klines_end_time - klines_start_time} s")
-
-    if not kline:
-        raise Exception(f"No klines for time: {convert_unix_to_str(end_time)}")
-
-    kline = kline[0]
-    start_time = end_time - time_window * 60 * 60 * 1000
-    klines_start_time = time.time()
-    min_price = get_min_price_in_range(start_time, end_time) 
-    klines_end_time = time.time()
-    print(f"Time for find min value: {klines_end_time - klines_start_time} s")
 
     closing_price = kline["close"]
     closing_time = kline["closeTime"]
     open_time = kline["startTime"]
+
+    start_time = closing_time - time_window * 60 * 60 * 1000
+    klines_start_time = time.time()
+    min_price = get_min_price_in_range(start_time, closing_time) 
+    klines_end_time = time.time()
+    print(f"Time for find min value: {klines_end_time - klines_start_time} s")
 
     res_percent_rised = ((closing_price - min_price) / min_price) * 100
 
     # Check if price change exceeds the threshold
     point = {
             "start_time": convert_unix_to_str(start_time),
-            "end_time": convert_unix_to_str(end_time),
+            "end_time": convert_unix_to_str(closing_time),
             "closing_time": convert_unix_to_str(closing_time),
             "open_time": convert_unix_to_str(open_time),
             "min_price": min_price,
@@ -82,6 +75,11 @@ def check_price(time_window, end_time, percent_rised, percent_drop):
 
     return point
 
+def process_klines(klines, args, line):
+    for kline in klines:
+        point = check_price(kline, args.time_window, args.percent_rised, args.percent_drop)
+        update_plot(line, point, high_point, low_point, mid_point)
+
 def process_time_frames(args, line):
     t1 = get_unix_timestamp(args.t1)
     t2 = get_unix_timestamp(args.t2)
@@ -89,31 +87,33 @@ def process_time_frames(args, line):
     time_window = args.time_window * 60 * 60 * 1000
     start_time = current_time - time_window
     klines_start_time = time.time()
-    klines = get_all_klines(start_time, t2)
+    get_and_save_all_klines(start_time, t2)
     klines_end_time = time.time()
     print(f"Time for getting klines: {klines_end_time - klines_start_time} s")
-    save_klines(klines)
 
-    while current_time < t2:
-        point = check_price(args.time_window, current_time, args.percent_rised, args.percent_drop)
-        update_plot(line, point, high_point, low_point, mid_point)
-        current_time += TIME_STEP
+    while t2 - current_time >= 100000000000:
+        next_time = current_time + 100000000000
+        klines = find_klines_in_range(current_time, next_time)
+        size_in_mb = sys.getsizeof(klines) / 1024 / 1024
+        print(f"Data size: {size_in_mb:.6f} MB")
+        process_klines(klines, args, line)
+        current_time = next_time
+
+    if t2 - current_time > 0:
+        klines = find_klines_in_range(current_time, t2)
+        process_klines(klines, args, line)
 
 
 def real_time_monitoring(args, line):
     time_window = args.time_window * 60 * 60 * 1000
     current_time = int(time.time() * 1000)
     start_time = current_time - time_window
-    klines = get_all_klines(start_time, current_time)
-    save_klines(klines)
-
+    klines = get_and_save_all_klines(start_time, current_time)
     while True:
-        point = check_price(args.time_window, current_time, args.percent_rised, args.percent_drop)
-        update_plot(line, point, high_point, low_point, mid_point)
+        process_klines(klines, args, line)
         time.sleep(60)
         current_time = int(time.time() * 1000)
-        klines = get_all_klines(current_time - TIME_STEP, current_time)
-        save_klines(klines)
+        klines = get_and_save_all_klines(current_time - TIME_STEP, current_time)
 
 
 def main():

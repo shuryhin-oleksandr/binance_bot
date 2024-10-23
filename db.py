@@ -5,7 +5,6 @@ mongo_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_client["crypto_data"]
 collection = db["btc_klines"]
 collection.create_index("startTime")
-collection.create_index("closeTime")
 
 def save_klines(klines):
     documents = []
@@ -40,13 +39,8 @@ def save_klines(klines):
     insert_klines_end_time = time.time()
     print(f"Time for insert klines: {insert_klines_end_time - insert_klines_start_time} s")
 
-def find_klines_near_close_time(current_time, buffer_ms=5000):
-    return list(collection.find({
-        "closeTime": {
-            "$gte": current_time - buffer_ms,
-            "$lte": current_time + buffer_ms
-        }
-    }))
+def find_klines_in_range(start_time, end_time):
+    return list(collection.find({"startTime": {"$gte": start_time, "$lt": end_time}}))
 
 def get_min_price_in_range(start_time, end_time):
     min_price_doc = collection.find({"startTime": {"$gte": start_time, "$lt": end_time}}).sort("low", 1).limit(1)
