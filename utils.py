@@ -11,8 +11,8 @@ def convert_unix_to_str(unix_timestamp):
 
 def show_point(point):
     print(
-        f"Start time: {point['start_time']}, End Time: {point['end_time']}, Closing Time: {point['closing_time']}, "
-        f"Price: {point['price']}, Min Price: {point['min_price']}"
+        f"Start time: {convert_unix_to_str(point['startTime'])}, Closing Time: {convert_unix_to_str(point['closeTime'])}, "
+        f"Price: {point['close']}"
     )
 
 
@@ -22,5 +22,5 @@ def show_high_point(point):
 
 
 def show_low_point(point):
-    print(f"Low point: (the price has dropped by {point['percent_drop']})")
+    print(f"Low point: (the price has dropped by {point['percent_drop']}%)")
     show_point(point)

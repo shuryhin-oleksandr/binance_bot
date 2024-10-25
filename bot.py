@@ -1,141 +1,145 @@
-
 import math
 import time
 import sys
 import argparse
-from graphic import initialize_plot, update_plot
-from db import find_klines_in_range, get_min_price_in_range
-from utils import get_unix_timestamp, convert_unix_to_str, show_high_point, show_low_point
-from binance_api import get_and_save_all_klines
+from graphic import Graphic
+from utils import get_unix_timestamp, show_high_point, show_low_point
 
-TIME_STEP = 1 * 60 * 1000 # one minute in unix
+TIME_STEP = 1 * 60 * 1000  # one minute in unix
 
-high_point = None
-mid_point = None
-low_point = None
+def get_min_price(klines, start_index, last_index):
+        return min(klines[j]["close"] for j in range(start_index, last_index))
 
-def is_high_point(point):
-    global high_point
-    if high_point["price"] < point["price"]:
-        return True
+class PriceMonitoring:
+    def __init__(self, kline_manager, time_window, percent_rised, percent_drop, plot_graphic=False):
+        self.kline_manager = kline_manager
+        self.time_window = time_window * 60 * 60 * 1000  # Convert hours to milliseconds
+        self.percent_rised = percent_rised
+        self.percent_drop = percent_drop
+        self.high_point = None
+        self.mid_point = None
+        self.low_point = None
+        self.graphic = Graphic() if plot_graphic else None
 
-def is_low_point(point):
-    global low_point
-    if low_point["price"] > point["price"]:
-        return True
+    def _is_high_point(self, point):
+        return self.high_point is None or self.high_point["close"] < point["close"]
 
+    def _is_low_point(self, point):
+        return self.low_point is None or self.low_point["close"] > point["close"]
 
-def check_price(kline, time_window, percent_rised, percent_drop):
-    global high_point, low_point, mid_point
+    def _analyze_kline(self, kline, min_price):
+        closing_price = kline["close"]
 
-    closing_price = kline["close"]
-    closing_time = kline["closeTime"]
-    open_time = kline["startTime"]
+        res_percent_rised = ((closing_price - min_price) / min_price) * 100
 
-    start_time = closing_time - time_window * 60 * 60 * 1000
-    klines_start_time = time.time()
-    min_price = get_min_price_in_range(start_time, closing_time) 
-    klines_end_time = time.time()
-    print(f"Time for find min value: {klines_end_time - klines_start_time} s")
+        if res_percent_rised >= self.percent_rised and self._is_high_point(kline):
+            kline["percent_rised"] = res_percent_rised
+            self.high_point = kline
+            self.mid_point = None
+            show_high_point(kline)
 
-    res_percent_rised = ((closing_price - min_price) / min_price) * 100
+        if self.high_point:
+            res_percent_drop = ((self.high_point["close"] - closing_price) / self.high_point["close"]) * 100
+            kline["percent_drop"] = res_percent_drop
+            if res_percent_drop >= self.percent_drop and self._is_low_point(kline):
+                self.low_point = kline
+                self.mid_point = None
+                show_low_point(kline)
 
-    # Check if price change exceeds the threshold
-    point = {
-            "start_time": convert_unix_to_str(start_time),
-            "end_time": convert_unix_to_str(closing_time),
-            "closing_time": convert_unix_to_str(closing_time),
-            "open_time": convert_unix_to_str(open_time),
-            "min_price": min_price,
-            "price": closing_price,
-            "percent_rised": res_percent_rised
-        }
+        if self.low_point and closing_price >= math.sqrt(self.high_point["close"] * self.low_point["close"]):
+            self.mid_point = kline
 
-    # find high point
-    if res_percent_rised >= percent_rised:
-        if high_point is None or is_high_point(point):
-            high_point = point
-            mid_point = None
-            # show_high_point(point)
-
-    # find low point
-    if high_point:
-        res_percent_drop = ((high_point["price"] - closing_price) / high_point["price"]) * 100
-        point["percent_drop"] = res_percent_drop
-        if res_percent_drop >= percent_drop:
-            if low_point is None or is_low_point(point):
-                low_point = point
-                mid_point = None
-                # show_low_point(point)
+        return kline
     
-    # find mid point 
-    if low_point:
-        if closing_price >= math.sqrt(high_point["price"] * low_point["price"]): 
-            mid_point = point
+    def _start_index_for_analyze(self):
+        return int(self.time_window / TIME_STEP)
 
-    return point
+    def _analyze_klines(self, klines):
+        start_index = self._start_index_for_analyze()
+        for index in range(start_index, len(klines)):
+            current_kline = klines[index]
+            min_search_start = index - start_index
+            min_price = get_min_price(klines, min_search_start, index)
 
-def process_klines(klines, args, line):
-    for kline in klines:
-        point = check_price(kline, args.time_window, args.percent_rised, args.percent_drop)
-        update_plot(line, point, high_point, low_point, mid_point)
+            self._analyze_kline(current_kline, min_price)
+    
+    def _analyze_klines_and_plot_point(self, klines):
+        start_index = self._start_index_for_analyze()
 
-def process_time_frames(args, line):
-    t1 = get_unix_timestamp(args.t1)
-    t2 = get_unix_timestamp(args.t2)
-    current_time = t1
-    time_window = args.time_window * 60 * 60 * 1000
-    start_time = current_time - time_window
-    klines_start_time = time.time()
-    get_and_save_all_klines(start_time, t2)
-    klines_end_time = time.time()
-    print(f"Time for getting klines: {klines_end_time - klines_start_time} s")
+        for index in range(start_index, len(klines)):
+            current_kline = klines[index]
+            min_search_start = index - start_index
+            min_price = self._get_min_price(klines,min_search_start, index)
 
-    while t2 - current_time >= 100000000000:
-        next_time = current_time + 100000000000
-        klines = find_klines_in_range(current_time, next_time)
-        size_in_mb = sys.getsizeof(klines) / 1024 / 1024
-        print(f"Data size: {size_in_mb:.6f} MB")
-        process_klines(klines, args, line)
-        current_time = next_time
+            self._analyze_kline(current_kline, min_price)
+            self.graphic.update_plot(current_kline, self.high_point, self.low_point, self.mid_point)
 
-    if t2 - current_time > 0:
-        klines = find_klines_in_range(current_time, t2)
-        process_klines(klines, args, line)
+    def monitoring(self):
+        raise NotImplementedError("Subclasses should implement this method")
 
-
-def real_time_monitoring(args, line):
-    time_window = args.time_window * 60 * 60 * 1000
-    current_time = int(time.time() * 1000)
-    start_time = current_time - time_window
-    klines = get_and_save_all_klines(start_time, current_time)
-    while True:
-        process_klines(klines, args, line)
-        time.sleep(60)
+class RealTimePriceMonitoring(PriceMonitoring):
+    
+    def monitoring(self):
         current_time = int(time.time() * 1000)
-        klines = get_and_save_all_klines(current_time - TIME_STEP, current_time)
+        
+        while True:
+            start_time = current_time - self.time_window # get data starting from now - Yhr
+            klines = self.kline_manager.find_or_fetch_klines_in_range(start_time, current_time)
 
+            if self.graphic:
+                self._analyze_klines_and_plot_point(klines)
+            else:
+                self._analyze_klines(klines)
+            
+            time.sleep(60)
+
+class HistoricalPriceMonitoring(PriceMonitoring):
+    def __init__(self, kline_manager, time_window, percent_rised, percent_drop, plot_graphic, t1, t2):
+        super().__init__(kline_manager, time_window, percent_rised, percent_drop, plot_graphic)
+        self.t1 = get_unix_timestamp(t1)
+        self.t2 = get_unix_timestamp(t2)
+
+    def monitoring(self):
+        current_time = self.t1
+        interval = int(60 * 60 * 24 * 43 * 150 * TIME_STEP / 1000) # klines size == 0.5 Gb
+
+        while current_time < self.t2:
+            next_time = min(current_time + interval, self.t2)
+            start_time = current_time - self.time_window # get data starting from t1 - Yhr
+
+            klines = self.kline_manager.find_or_fetch_klines_in_range(start_time, next_time)
+            size_in_mb = sys.getsizeof(klines) / 1024 / 1024
+            print(f"Data size: {size_in_mb:.6f} MB")
+
+            if self.graphic:
+                self._analyze_klines_and_plot_point(klines)
+            else:
+                self._analyze_klines(klines)
+            current_time = next_time
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check if a coin price has increased by a certain percentage within a time period.")
-
+    parser = argparse.ArgumentParser(description="Check if a coin price has increased by a certain percentage within a time period.")
     parser.add_argument('percent_rised', type=float, help='Percentage rised threshold (X%)')
     parser.add_argument('percent_drop', type=float, help='Percentage drop threshold (Y%)')
     parser.add_argument('time_window', type=int, help='Time window in hours to check the price increase (Yhr)')
     parser.add_argument('--t1', type=str, help='Start time in format YYYY-MM-DD HH:MM:SS')
     parser.add_argument('--t2', type=str, help='End time in format YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--real_time', action='store_true', help='Real times')
+    parser.add_argument('--real_time', action='store_true', help='Real time monitoring')
+    parser.add_argument('--plot_graphic', action='store_true', help='Plot graphic')
+
     args = parser.parse_args()
-    fig, ax, line = initialize_plot()
+
+    from manager import KlineManager
+    kline_manager = KlineManager("mongodb://localhost:27017/", "crypto_data", "btc_klines")
 
     if args.real_time:
-        real_time_monitoring(args, line)
+        monitoring = RealTimePriceMonitoring(kline_manager, args.time_window, args.percent_rised, args.percent_drop, args.plot_graphic)
     else:
         if not args.t1 or not args.t2:
             raise ValueError("Set t1 t2 interval.")
-        process_time_frames(args, line)
+        monitoring = HistoricalPriceMonitoring(kline_manager, args.time_window, args.percent_rised, args.percent_drop, args.plot_graphic, args.t1, args.t2)
 
+    monitoring.monitoring()
 
 if __name__ == '__main__':
     main()
