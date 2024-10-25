@@ -34,7 +34,7 @@ class Graphic:
                 if child.get_color() == color:
                     child.remove()
 
-    def _plot_point(self, point, color, label):
+    def _plot_kline(self, point, color, label):
         if point:
             point_time = datetime.strptime(convert_unix_to_str(point['closeTime']), '%Y-%m-%d %H:%M:%S')
             point_price = point['close']

@@ -9,18 +9,18 @@ def convert_unix_to_str(unix_timestamp):
     return datetime.fromtimestamp(unix_timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def show_point(point):
+def show_kline(kline):
     print(
-        f"Start time: {convert_unix_to_str(point['startTime'])}, Closing Time: {convert_unix_to_str(point['closeTime'])}, "
-        f"Price: {point['close']}"
+        f"Start time: {convert_unix_to_str(kline['startTime'])}, Closing Time: {convert_unix_to_str(kline['closeTime'])}, "
+        f"Price: {kline['close']}"
     )
 
 
-def show_high_point(point):
-    print(f"High point: (the the price increased by {point['percent_rised']}% from its peak.)")
-    show_point(point)
+def show_high_kline(kline):
+    print(f"High kline: (the the price increased by {kline['percent_rised']}% from its peak.)")
+    show_kline(kline)
 
 
-def show_low_point(point):
-    print(f"Low point: (the price has dropped by {point['percent_drop']}%)")
-    show_point(point)
+def show_low_kline(kline):
+    print(f"Low kline: (the price has dropped by {kline['percent_drop']}%)")
+    show_kline(kline)
