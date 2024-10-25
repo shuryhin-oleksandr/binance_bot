@@ -8,7 +8,7 @@ from utils import get_unix_timestamp, show_high_kline, show_low_kline
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 
 def get_min_price(klines, start_index, last_index):
-        return min(klines[j]["close"] for j in range(start_index, last_index))
+        return min(klines[j]["low"] for j in range(start_index, last_index))
 
 class PriceMonitoring:
     def __init__(self, kline_manager, time_window, percent_rised, percent_drop, plot_graphic=False):
@@ -56,7 +56,7 @@ class PriceMonitoring:
 
     def _analyze_klines(self, klines):
         start_index = self._start_index_for_analyze()
-        
+
         for index in range(start_index, len(klines)):
             current_kline = klines[index]
             min_search_start = index - start_index
@@ -70,7 +70,7 @@ class PriceMonitoring:
         for index in range(start_index, len(klines)):
             current_kline = klines[index]
             min_search_start = index - start_index
-            min_price = self._get_min_price(klines,min_search_start, index)
+            min_price = get_min_price(klines,min_search_start, index)
 
             self._analyze_kline(current_kline, min_price)
             self.graphic.update_plot(current_kline, self.high_kline, self.low_kline, self.mid_kline)
