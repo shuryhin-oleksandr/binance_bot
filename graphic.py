@@ -39,10 +39,13 @@ class Graphic:
         self.y_data = []
 
         for point in all_points:
+            # TODO: reaname to point_time
             new_time = datetime.strptime(
                 convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
             )
+            # TODO: Rename to point_price
             new_price = point["close"]
+            # Question: Why do we use axes?
             self.x_data.append(new_time)
             self.y_data.append(new_price)
 

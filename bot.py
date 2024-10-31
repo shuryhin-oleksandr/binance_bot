@@ -41,12 +41,15 @@ class PriceMonitoring:
         self.graphic = Graphic() if plot_graphic else None
 
     def _is_highest_kline(self, kline):
+        # TODO: Compare by high value
         return self.high_kline is None or (self.high_kline["close"] < kline["close"])
 
     def _is_lowest_kline(self, kline):
+        # TODO: Compare by low value
         return self.low_kline is None or self.low_kline["close"] > kline["close"]
 
     def _analyze_kline(self, kline, min_price):
+        # TODO: we should take high price
         closing_price = kline["close"]
         kline["status"] = ""  # all klines with status low, high, mid or none
 
@@ -66,8 +69,10 @@ class PriceMonitoring:
             log_high_kline(kline)
             return kline
 
+        # TODO: Add phase property, which can be one of: idle, high_found, low_found, mid_found
         if self.high_kline:
             calculated_target_price_drop_percent = (
+                # TODO: calculate based on low price
                 (self.high_kline["close"] - closing_price) / self.high_kline["close"]
             ) * 100
             kline["target_price_drop_percent"] = calculated_target_price_drop_percent
@@ -102,7 +107,9 @@ class PriceMonitoring:
         return len(klines) - 1  # end list of klines
 
     def _analyze_klines(self, klines, current_time):
+        # TODO: Add docstring
         processed_klines = []
+        # What is analysis start_index used for?
         analysis_start_index = self._analyzed_time_interval(klines, current_time)
 
         for index in range(analysis_start_index, len(klines)):
@@ -135,6 +142,7 @@ class RealTimePriceMonitoring(PriceMonitoring):
             time.sleep(60)
 
 
+# TODO: Fix naming
 class HistoricalPriceMonitoring(PriceMonitoring):
     def __init__(
         self,
@@ -158,10 +166,12 @@ class HistoricalPriceMonitoring(PriceMonitoring):
 
     def monitoring(self):
         chunk_analysis_start_time = self.analysis_start_time
+        # TODO: Fix typo
         chank_time_size = int(
             60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
         )  # klines size ~ 0.5 Gb
 
+        # TODO: Refine chunk_analysis_start_time naming
         while chunk_analysis_start_time < self.analysis_end_time:
             chunk_start_time = (
                 chunk_analysis_start_time - self.time_window
@@ -170,6 +180,7 @@ class HistoricalPriceMonitoring(PriceMonitoring):
                 chunk_analysis_start_time + chank_time_size, self.analysis_end_time
             )
 
+            # TODO: rename to chunk_klines
             klines = self.kline_manager.find_or_fetch_klines_in_range(
                 chunk_start_time, chunk_end_time
             )
@@ -209,6 +220,8 @@ def main():
     from manager import KlineManager
 
     kline_manager = KlineManager(
+        # TODO: Extract mongo url, db name to constants on the top of the file
+        # TODO: Extract collection name to a top of the file, make it dependant on SYMBOL value
         "mongodb://localhost:27017/", "crypto_data", "btc_klines"
     )
 
@@ -229,6 +242,7 @@ def main():
             args.target_price_growth_percent,
             args.target_price_drop_percent,
             args.plot_graphic,
+            # TODO: rename t1, t2
             args.t1,
             args.t2,
         )

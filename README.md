@@ -14,6 +14,8 @@
 - The bot takes candles for last HOURS hours, finds start_price, checks if there is high_price
 - When new candle available, bot moved analysed snapshot by 1 candle (-1 old candle, +1 new candle) and repeats
 
+# TODO: Add an overview of how bot works on code level
+
 ### Next tasks
 - [ ] Draw grah: show all high, low points, now only last one
 - [ ] Handle 1 year for historical analysis (performance issue)
