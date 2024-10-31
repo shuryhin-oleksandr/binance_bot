@@ -14,7 +14,7 @@ class Graphic:
         self._initialize_plot()
         (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
         self.current_page = 0
-        self.points_per_page = 1440
+        self.points_per_page = 1440 * 100 # ~ 100days
         self.slider = self._create_slider()
 
     def _initialize_plot(self):
@@ -46,7 +46,7 @@ class Graphic:
             self.x_data.append(new_time)
             self.y_data.append(new_price)
 
-        max_page = (len(self.x_data) - 1) // self.points_per_page // 100
+        max_page = (len(self.x_data) - 1) // self.points_per_page
         self.slider.valmax = max_page  #  Max slider value
         self.slider.ax.set_xlim(
             0, max_page
@@ -108,9 +108,9 @@ class Graphic:
         self._initialize_plot()
 
         # Calculation of indices for the current page
-        start_idx = self.current_page * self.points_per_page * 100
+        start_idx = self.current_page * self.points_per_page
         end_idx = min(
-            (self.current_page + 1) * self.points_per_page * 100, len(self.x_data)
+            (self.current_page + 1) * self.points_per_page, len(self.x_data)
         )
 
         # Draw line
