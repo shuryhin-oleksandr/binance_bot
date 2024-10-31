@@ -9,11 +9,14 @@
 - Than bot waits for low_price to be reached (price goes down), and mid_price to be reached (price goes up)
 - Once all checkpoints are gone (high, low, mid), bot places orders
 
+### Installation
+# TODO: Include installation instruction for 
 
 ### Implementation details
 - The bot takes candles for last HOURS hours, finds start_price, checks if there is high_price
 - When new candle available, bot moved analysed snapshot by 1 candle (-1 old candle, +1 new candle) and repeats
 
+### Tech overview
 # TODO: Add an overview of how bot works on code level
 
 ### Next tasks
