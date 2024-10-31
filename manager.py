@@ -1,14 +1,9 @@
 import time
+import logging
 from pymongo import MongoClient
 from bot import TIME_STEP
 from binance_api import get_klines
 from utils import convert_unix_to_str
-
-def count_number_of_expected_kline(start_time, end_time):
-        # Calculate the number of minutes between two timestamps
-        minutes_in_range = (end_time - start_time) / TIME_STEP
-        return int(minutes_in_range)
-
 
 def get_missing_intervals(missing_times):
         """Convert missing times into start and end intervals."""
@@ -93,7 +88,7 @@ class KlineManager:
         insert_klines_start_time = time.time()
         self.collection.insert_many(documents)
         insert_klines_end_time = time.time()
-        print(f"Time for insert klines: {insert_klines_end_time - insert_klines_start_time} s")
+        logging.info(f"Time for insert klines: {insert_klines_end_time - insert_klines_start_time} s")
     
     def find_klines_in_range(self, start_time, end_time):
         return list(self.collection.find({"startTime": {"$gte": start_time, "$lt": end_time}}))
@@ -101,19 +96,16 @@ class KlineManager:
     def find_or_fetch_klines_in_range(self, start_time, end_time):
         klines = self.find_klines_in_range(start_time, end_time)
 
-        # Check data
-        if not klines or len(klines) < count_number_of_expected_kline(start_time, end_time):
-
-            print(f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete. Fetching missing data...")
-            # Load missing data from API and save it to the database
-            missing_times = self.find_missing_klines_time(start_time, end_time)
-            
+        # Load missing data from API and save it to the database
+        missing_times = self.find_missing_klines_time(start_time, end_time)
+        if missing_times:
+            logging.warning(f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete. Fetching missing data...")
             missing_intervals = get_missing_intervals(missing_times)
-            print(f"Missing intervals: {missing_intervals}")
 
             # Fetch and save missing data for each interval
             missing_klines = []
             for interval_start, interval_end in missing_intervals:
+                logging.warning(f"Missing intervals: {convert_unix_to_str(interval_start)} - {convert_unix_to_str(interval_end)}")
                 self.get_and_save_all_klines(interval_start, interval_end)
                 missing_klines += self.find_klines_in_range(interval_start, interval_end)
 

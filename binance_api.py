@@ -1,4 +1,6 @@
 import requests
+import logging
+from utils import convert_unix_to_str
 
 BINANCE_API_URL = 'https://api.binance.com/api/v3/klines'
 SYMBOL = 'BTCUSDT'
@@ -18,7 +20,7 @@ def get_klines(start_time, end_time):
     klines = response.json()
 
     if not klines:
-            raise Exception("Klines data is empty.")
+        logging.error(f"Data not found for the interval: {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)}")
         
     if "msg" in klines:
         raise Exception(klines)

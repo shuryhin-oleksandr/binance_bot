@@ -1,59 +1,53 @@
+import matplotlib
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 from datetime import datetime
 from utils import convert_unix_to_str
 
+matplotlib.use('TkAgg')
+
 class Graphic:
     def __init__(self):
-        self.fig, self.ax, self.line = self._initialize_plot()
+        self.fig, self.ax = plt.subplots(figsize=(12, 6))
+        self._initialize_plot()
+        self.line, = self.ax.plot([], [], 'bo-', label='All Prices', markersize=1)
+        self.current_page = 0
+        self.points_per_page = 1440
+        self.slider = self._create_slider()
 
     def _initialize_plot(self):
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
-        ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
-        plt.xticks(rotation=90)
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
+        self.ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
+        self.ax.grid(True)
 
-        plt.xlabel('Closing Time')
-        plt.ylabel('Price')
-        plt.title('Real-Time Price Visualization with High, Low, and Mid Points')
-        plt.grid(True)
+        self.ax.set_xlabel('Date')
+        self.ax.set_ylabel('Price')
 
-        line, = ax.plot([], [], 'bo-', label='All Prices', markersize=2)
-        plt.legend()
-        plt.tight_layout()
+    def _create_slider(self):
+        slider_ax = self.fig.add_axes([0.2, 0.02, 0.6, 0.03], facecolor="lightgoldenrodyellow")
+        slider = Slider(slider_ax, "Page", 0, 1, valinit=0, valstep=1)
+        slider.on_changed(self._update_plot_with_slider)
+        return slider
 
-        # Enable zoom and pan
-        fig.canvas.mpl_connect('scroll_event', lambda event: ax.set_xlim(auto=True))  # Zoom
-        fig.canvas.mpl_connect('button_press_event', lambda event: ax.set_xlim(auto=True))  # Pan
+    def create_plot_for_historical_data(self, all_points):
+        self.all_points = all_points
+        self.x_data = []
+        self.y_data = []
+        
+        for point in all_points:
+            new_time = datetime.strptime(convert_unix_to_str(point['closeTime']), '%Y-%m-%d %H:%M:%S')
+            new_price = point['close']
+            self.x_data.append(new_time)
+            self.y_data.append(new_price)
 
-        return fig, ax, line
+        max_page = (len(self.x_data) - 1) // self.points_per_page // 100
+        self.slider.valmax = max_page  #  Max slider value
+        self.slider.ax.set_xlim(0, max_page)  # Display the slider scale according to the number of pages
+        self.slider.set_val(0)  # Set first page
+        self.slider.ax.figure.canvas.draw_idle()
 
-    def _remove_dashed_line(self, color):
-        for child in self.ax.get_children():
-            if isinstance(child, plt.Line2D) and child.get_linestyle() == '--':
-                if child.get_color() == color:
-                    child.remove()
-
-    def _plot_point(self, point, color, label):
-        if point:
-            point_time = datetime.strptime(convert_unix_to_str(point['closeTime']), '%Y-%m-%d %H:%M:%S')
-            point_price = point['close']
-
-            self.ax.plot(point_time, point_price, color[0] + 'o', label=label, markersize=5)
-            label_point = label.split(' ', 1)[0]
-            self.ax.text(point_time, point_price, f'{label_point}: {point_price}', fontsize=5, verticalalignment='bottom')
-
-            # Remove any existing dashed line of the specified color
-            self._remove_dashed_line(color)
-
-            # Draw the horizontal line
-            self.ax.axhline(y=point_price, color=color, linestyle='--', linewidth=0.8)
-
-    def _is_mid_point_label_present(self):
-        for child in self.ax.get_children():
-            if isinstance(child, plt.Text) and child.get_text().startswith("Mid:"):
-                return True
-        return False
+        self.paginate_plot()
 
     def _clear_old_labels(self):
         for child in self.ax.get_children():
@@ -61,7 +55,13 @@ class Graphic:
                 if child.get_text().startswith("High:") or child.get_text().startswith("Low:"):
                     child.remove()
 
-    def update_plot(self, new_point, high_point=None, low_point=None, mid_point=None):
+    def _remove_dashed_line(self, color):
+        for child in self.ax.get_children():
+            if isinstance(child, plt.Line2D) and child.get_linestyle() == '--':
+                if child.get_color() == color:
+                    child.remove()
+
+    def update_plot_real_time(self, new_point):
         # Get data
         x_data = self.line.get_xdata()
         y_data = self.line.get_ydata()
@@ -70,13 +70,6 @@ class Graphic:
         new_time = datetime.strptime(convert_unix_to_str(new_point['closeTime']), '%Y-%m-%d %H:%M:%S')
         new_price = new_point['close']
 
-        # Update plot lines for mid points
-        if mid_point and len(x_data) > 0:
-            last_time = x_data[-1]
-            last_price = y_data[-1]
-            self.ax.plot([last_time, new_time], [last_price, new_price], 'yo-', markersize=2)  # Yellow line for new segment
-
-        # Otherwise, extend the blue line
         x_data = list(x_data) + [new_time]
         y_data = list(y_data) + [new_price]
         self.line.set_data(x_data, y_data)
@@ -88,11 +81,77 @@ class Graphic:
         self._clear_old_labels()
 
         # Show high, low, and mid points
-        self._plot_point(high_point, 'green', 'High Point (Rise X%)')
-        self._plot_point(low_point, 'red', 'Low Point (Drop by Y%)')
+        if  new_point['status'] == 'high':
+            self._plot_last_point(new_point, 'k', 'High:')
+        elif new_point['status'] == 'low':
+            self._plot_last_point(new_point, 'r', 'Low:')
+        elif new_point['status'] == 'mid':
+            self._plot_last_point(new_point, 'm', 'Mid:')
 
-        if mid_point and not self._is_mid_point_label_present():
-            self._plot_point(mid_point, 'yellow', 'Mid Point')
+        self.fig.canvas.draw_idle()
+        plt.show()
 
-        plt.draw()
-        plt.pause(0.0001)
+
+    def paginate_plot(self):
+        # clear graphic
+        self.ax.clear()
+        self._initialize_plot()
+
+        # Calculation of indices for the current page
+        start_idx = self.current_page * self.points_per_page * 100
+        end_idx = min((self.current_page + 1) * self.points_per_page * 100, len(self.x_data))
+
+        # Draw line
+        self.ax.plot(self.x_data[start_idx:end_idx], self.y_data[start_idx:end_idx], 'bo-', label='All Prices', markersize=1)
+
+        all_klines = self.all_points[start_idx:end_idx]
+        high_points = []
+        low_points = []
+        mid_points = []
+
+        for kline in all_klines:
+            if kline['status'] == 'high':
+                high_points.append(kline)
+            elif kline['status'] == 'low':
+                low_points.append(kline)
+            elif kline['status'] == 'mid':
+                mid_points.append(kline)
+
+        self.plot_all_points(high_points, color='k', label='High:')
+        self.plot_all_points(low_points, color='r', label='Low:')
+
+        for point in mid_points:
+            self._plot_last_point(point, color='m', label='Mid:')
+        
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.ax.legend()
+
+        self.fig.canvas.draw_idle()
+        plt.show()
+
+    def plot_all_points(self, points, color, label=None):
+        for point in points:
+            self._plot_point(point, color=color)
+        if points:
+            self._plot_last_point(points[-1], color=color, label=label)
+
+    def _update_plot_with_slider(self, val):
+        self.current_page = int(val)
+        self.paginate_plot()
+
+    def _plot_point(self, point, color): 
+        
+        point_time = datetime.strptime(convert_unix_to_str(point['closeTime']), '%Y-%m-%d %H:%M:%S')
+        point_price = point['close']
+
+        self.ax.plot(point_time, point_price, color[0] + 'o', markersize=4)
+        return point_time, point_price
+
+    def _plot_last_point(self, point, color, label):
+        if point:
+            point_time, point_price = self._plot_point(point, color)
+            self.ax.text(point_time, point_price, f'{label} {point_price} {point_time}', fontsize=8, verticalalignment='bottom')
+
+            self._remove_dashed_line(color)
+            self.ax.axhline(y=point_price, color=color, linestyle='--', linewidth=0.8)
