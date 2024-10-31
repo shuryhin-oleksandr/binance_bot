@@ -19,6 +19,10 @@
 - [ ] Handle 1 year for historical analysis (performance issue)
 
 
-### Running the but 
-1. For historical data: `python bot.py 2 2 2 --t1="2024-10-15 16:00:00" --t2="2024-10-15 20:00:00"`
-2. For real-time: `python bot.py 1 3 1 --real_time`         
+### Running the bot 
+1. For historical data: `python bot.py 30 15 24 --t1="2024-10-15 16:00:00" --t2="2024-10-15 20:00:00"`
+2. For real-time: `python bot.py 30 15 24 --real_time`         
+3. Running with graphic `python bot.py 30 15 24 --t1="2024-10-15 16:00:00" --t2="2024-10-15 20:00:00" --plot_graphic`
+
+### Running the script for data uploading
+`python fetch_klines_script.py "2017-06-15 00:00:00" "2019-10-15 0:00:00"`

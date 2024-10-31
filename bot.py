@@ -1,141 +1,240 @@
-
 import math
 import time
-import sys
 import argparse
-from graphic import initialize_plot, update_plot
-from db import find_klines_in_range, get_min_price_in_range
-from utils import get_unix_timestamp, convert_unix_to_str, show_high_point, show_low_point
-from binance_api import get_and_save_all_klines
+from graphic import Graphic
+import logging
 
-TIME_STEP = 1 * 60 * 1000 # one minute in unix
+# Configure the logging level and format
+logging.basicConfig(
+    filename="kline_log.log",  # Specify the log file name
+    level=logging.INFO,  # Set the log level
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filemode="w",  # Use 'w' to overwrite the log file each run, or 'a' to append
+)
 
-high_point = None
-mid_point = None
-low_point = None
+from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline
 
-def is_high_point(point):
-    global high_point
-    if high_point["price"] < point["price"]:
-        return True
-
-def is_low_point(point):
-    global low_point
-    if low_point["price"] > point["price"]:
-        return True
+TIME_STEP = 1 * 60 * 1000  # one minute in unix
 
 
-def check_price(kline, time_window, percent_rised, percent_drop):
-    global high_point, low_point, mid_point
-
-    closing_price = kline["close"]
-    closing_time = kline["closeTime"]
-    open_time = kline["startTime"]
-
-    start_time = closing_time - time_window * 60 * 60 * 1000
-    klines_start_time = time.time()
-    min_price = get_min_price_in_range(start_time, closing_time) 
-    klines_end_time = time.time()
-    print(f"Time for find min value: {klines_end_time - klines_start_time} s")
-
-    res_percent_rised = ((closing_price - min_price) / min_price) * 100
-
-    # Check if price change exceeds the threshold
-    point = {
-            "start_time": convert_unix_to_str(start_time),
-            "end_time": convert_unix_to_str(closing_time),
-            "closing_time": convert_unix_to_str(closing_time),
-            "open_time": convert_unix_to_str(open_time),
-            "min_price": min_price,
-            "price": closing_price,
-            "percent_rised": res_percent_rised
-        }
-
-    # find high point
-    if res_percent_rised >= percent_rised:
-        if high_point is None or is_high_point(point):
-            high_point = point
-            mid_point = None
-            # show_high_point(point)
-
-    # find low point
-    if high_point:
-        res_percent_drop = ((high_point["price"] - closing_price) / high_point["price"]) * 100
-        point["percent_drop"] = res_percent_drop
-        if res_percent_drop >= percent_drop:
-            if low_point is None or is_low_point(point):
-                low_point = point
-                mid_point = None
-                # show_low_point(point)
-    
-    # find mid point 
-    if low_point:
-        if closing_price >= math.sqrt(high_point["price"] * low_point["price"]): 
-            mid_point = point
-
-    return point
-
-def process_klines(klines, args, line):
-    for kline in klines:
-        point = check_price(kline, args.time_window, args.percent_rised, args.percent_drop)
-        update_plot(line, point, high_point, low_point, mid_point)
-
-def process_time_frames(args, line):
-    t1 = get_unix_timestamp(args.t1)
-    t2 = get_unix_timestamp(args.t2)
-    current_time = t1
-    time_window = args.time_window * 60 * 60 * 1000
-    start_time = current_time - time_window
-    klines_start_time = time.time()
-    get_and_save_all_klines(start_time, t2)
-    klines_end_time = time.time()
-    print(f"Time for getting klines: {klines_end_time - klines_start_time} s")
-
-    while t2 - current_time >= 100000000000:
-        next_time = current_time + 100000000000
-        klines = find_klines_in_range(current_time, next_time)
-        size_in_mb = sys.getsizeof(klines) / 1024 / 1024
-        print(f"Data size: {size_in_mb:.6f} MB")
-        process_klines(klines, args, line)
-        current_time = next_time
-
-    if t2 - current_time > 0:
-        klines = find_klines_in_range(current_time, t2)
-        process_klines(klines, args, line)
+def get_min_price(klines, start_index, last_index):
+    return min(klines[j]["low"] for j in range(start_index, last_index))
 
 
-def real_time_monitoring(args, line):
-    time_window = args.time_window * 60 * 60 * 1000
-    current_time = int(time.time() * 1000)
-    start_time = current_time - time_window
-    klines = get_and_save_all_klines(start_time, current_time)
-    while True:
-        process_klines(klines, args, line)
-        time.sleep(60)
-        current_time = int(time.time() * 1000)
-        klines = get_and_save_all_klines(current_time - TIME_STEP, current_time)
+class PriceMonitoring:
+    def __init__(
+        self,
+        kline_manager,
+        time_window,
+        target_price_growth_percent,
+        target_price_drop_percent,
+        plot_graphic=False,
+    ):
+        self.kline_manager = kline_manager
+        self.time_window = time_window * 60 * 60 * 1000  # Convert hours to milliseconds
+        self.target_price_growth_percent = target_price_growth_percent
+        self.target_price_drop_percent = target_price_drop_percent
+        self.high_kline = None
+        self.mid_kline = None
+        self.low_kline = None
+        self.mid_price = None
+        self.graphic = Graphic() if plot_graphic else None
+
+    def _is_highest_kline(self, kline):
+        return self.high_kline is None or (self.high_kline["close"] < kline["close"])
+
+    def _is_lowest_kline(self, kline):
+        return self.low_kline is None or self.low_kline["close"] > kline["close"]
+
+    def _analyze_kline(self, kline, min_price):
+        closing_price = kline["close"]
+        kline["status"] = ""  # all klines with status low, high, mid or none
+
+        calculated_target_price_growth_percent = (
+            (closing_price - min_price) / min_price
+        ) * 100
+
+        if (
+            calculated_target_price_growth_percent >= self.target_price_growth_percent
+            and self._is_highest_kline(kline)
+        ):
+            kline["target_price_growth_percent"] = (
+                calculated_target_price_growth_percent
+            )
+            kline["status"] = "high"
+            self.high_kline = kline
+            log_high_kline(kline)
+            return kline
+
+        if self.high_kline:
+            calculated_target_price_drop_percent = (
+                (self.high_kline["close"] - closing_price) / self.high_kline["close"]
+            ) * 100
+            kline["target_price_drop_percent"] = calculated_target_price_drop_percent
+            if (
+                calculated_target_price_drop_percent >= self.target_price_drop_percent
+                and self._is_lowest_kline(kline)
+            ):
+                self.low_kline = kline
+                kline["status"] = "low"
+                self.mid_price = math.sqrt(
+                    self.high_kline["close"] * self.low_kline["close"]
+                )
+                self.mid_kline = None
+                log_low_kline(kline)
+                return kline
+
+        if self.low_kline and not self.mid_kline and closing_price >= self.mid_price:
+            kline["status"] = "mid"
+            self.mid_kline = kline
+            self.high_kline = None
+            self.low_kline = None
+            log_middle_kline(kline)
+
+        return kline
+
+    def _analyzed_time_interval(self, klines, current_time):
+
+        for i, kline in enumerate(klines):
+            if kline["closeTime"] >= current_time:  # first kline index >= current time
+                return i
+
+        return len(klines) - 1  # end list of klines
+
+    def _analyze_klines(self, klines, current_time):
+        processed_klines = []
+        analysis_start_index = self._analyzed_time_interval(klines, current_time)
+
+        for index in range(analysis_start_index, len(klines)):
+            current_kline = klines[index]
+            min_search_start = index - analysis_start_index
+            min_price = get_min_price(klines, min_search_start, index)
+            processed_klines.append(self._analyze_kline(current_kline, min_price))
+
+        return processed_klines
+
+    def monitoring(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+class RealTimePriceMonitoring(PriceMonitoring):
+
+    def monitoring(self):
+        while True:
+            current_time = int(time.time() * 1000)
+            start_time = (
+                current_time - self.time_window
+            )  # get data starting from now - Yhr
+            klines = self.kline_manager.find_or_fetch_klines_in_range(
+                start_time, current_time
+            )
+            processed_klines = self._analyze_klines(klines, current_time)
+            if self.graphic:
+                self.graphic.update_plot_real_time(processed_klines[-1])
+
+            time.sleep(60)
+
+
+class HistoricalPriceMonitoring(PriceMonitoring):
+    def __init__(
+        self,
+        kline_manager,
+        time_window,
+        target_price_growth_percent,
+        target_price_drop_percent,
+        plot_graphic,
+        t1,
+        t2,
+    ):
+        super().__init__(
+            kline_manager,
+            time_window,
+            target_price_growth_percent,
+            target_price_drop_percent,
+            plot_graphic,
+        )
+        self.analysis_start_time = get_unix_timestamp(t1)
+        self.analysis_end_time = get_unix_timestamp(t2)
+
+    def monitoring(self):
+        chunk_analysis_start_time = self.analysis_start_time
+        chank_time_size = int(
+            60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
+        )  # klines size ~ 0.5 Gb
+
+        while chunk_analysis_start_time < self.analysis_end_time:
+            chunk_start_time = (
+                chunk_analysis_start_time - self.time_window
+            )  # get data starting from t1 - Yhr
+            chunk_end_time = min(
+                chunk_analysis_start_time + chank_time_size, self.analysis_end_time
+            )
+
+            klines = self.kline_manager.find_or_fetch_klines_in_range(
+                chunk_start_time, chunk_end_time
+            )
+            processed_klines = self._analyze_klines(klines, chunk_analysis_start_time)
+            chunk_analysis_start_time = chunk_end_time
+
+            if self.graphic:
+                self.graphic.create_plot_for_historical_data(processed_klines)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Check if a coin price has increased by a certain percentage within a time period.")
+        description="Check if a coin price has increased by a certain percentage within a time period."
+    )
+    parser.add_argument(
+        "target_price_growth_percent",
+        type=float,
+        help="Percentage rised threshold (X%)",
+    )
+    parser.add_argument(
+        "target_price_drop_percent", type=float, help="Percentage drop threshold (Y%)"
+    )
+    parser.add_argument(
+        "time_window",
+        type=int,
+        help="Time window in hours to check the price increase (Yhr)",
+    )
+    parser.add_argument(
+        "--t1", type=str, help="Start time in format YYYY-MM-DD HH:MM:SS"
+    )
+    parser.add_argument("--t2", type=str, help="End time in format YYYY-MM-DD HH:MM:SS")
+    parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
+    parser.add_argument("--plot_graphic", action="store_true", help="Plot graphic")
 
-    parser.add_argument('percent_rised', type=float, help='Percentage rised threshold (X%)')
-    parser.add_argument('percent_drop', type=float, help='Percentage drop threshold (Y%)')
-    parser.add_argument('time_window', type=int, help='Time window in hours to check the price increase (Yhr)')
-    parser.add_argument('--t1', type=str, help='Start time in format YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--t2', type=str, help='End time in format YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--real_time', action='store_true', help='Real times')
     args = parser.parse_args()
-    fig, ax, line = initialize_plot()
+
+    from manager import KlineManager
+
+    kline_manager = KlineManager(
+        "mongodb://localhost:27017/", "crypto_data", "btc_klines"
+    )
 
     if args.real_time:
-        real_time_monitoring(args, line)
+        monitoring = RealTimePriceMonitoring(
+            kline_manager,
+            args.time_window,
+            args.target_price_growth_percent,
+            args.target_price_drop_percent,
+            args.plot_graphic,
+        )
     else:
         if not args.t1 or not args.t2:
             raise ValueError("Set t1 t2 interval.")
-        process_time_frames(args, line)
+        monitoring = HistoricalPriceMonitoring(
+            kline_manager,
+            args.time_window,
+            args.target_price_growth_percent,
+            args.target_price_drop_percent,
+            args.plot_graphic,
+            args.t1,
+            args.t2,
+        )
+
+    monitoring.monitoring()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
