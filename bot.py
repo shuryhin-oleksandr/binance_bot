@@ -122,7 +122,9 @@ class PriceAnalyzer:
 
         for index in range(analysis_start_index, len(klines)):
             current_kline = klines[index]
-            min_search_start = index - analysis_start_index
+            min_search_start = self._analyzed_time_interval(
+                klines, current_time - self.time_window
+            )  # find the start index for searching for minimum values within the time window Y hours
             min_price = get_min_price(klines, min_search_start, index)
             processed_klines.append(self._analyze_kline(current_kline, min_price))
 
