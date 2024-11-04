@@ -1,9 +1,9 @@
 import requests
 import logging
 from utils import convert_unix_to_str
+from bot import SYMBOL
 
 BINANCE_API_URL = "https://api.binance.com/api/v3/klines"
-SYMBOL = "BTCUSDT"
 INTERVAL = "1m"
 LIMIT = 1000
 

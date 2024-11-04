@@ -10,11 +10,11 @@ matplotlib.use("TkAgg")
 
 class Graphic:
     def __init__(self):
-        self.fig, self.ax = plt.subplots(figsize=(12, 6))
+        self.fig, self.ax = plt.subplots(figsize=(12, 6)) # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
         (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
         self.current_page = 0
-        self.points_per_page = 1440 * 100 # ~ 100days
+        self.points_per_page = 1440 * 100  # ~ 100days
         self.slider = self._create_slider()
 
     def _initialize_plot(self):
@@ -39,12 +39,14 @@ class Graphic:
         self.y_data = []
 
         for point in all_points:
-            new_time = datetime.strptime(
+            point_time = datetime.strptime(
                 convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
             )
-            new_price = point["close"]
-            self.x_data.append(new_time)
-            self.y_data.append(new_price)
+            point_price = point["close"]
+
+            # Add the time and price to respective x and y data lists for plotting
+            self.x_data.append(point_time)
+            self.y_data.append(point_price)
 
         max_page = (len(self.x_data) - 1) // self.points_per_page
         self.slider.valmax = max_page  #  Max slider value
@@ -76,13 +78,13 @@ class Graphic:
         y_data = self.line.get_ydata()
 
         # Add new data
-        new_time = datetime.strptime(
+        point_time = datetime.strptime(
             convert_unix_to_str(new_point["closeTime"]), "%Y-%m-%d %H:%M:%S"
         )
-        new_price = new_point["close"]
+        point_price = new_point["close"]
 
-        x_data = list(x_data) + [new_time]
-        y_data = list(y_data) + [new_price]
+        x_data = list(x_data) + [point_time]
+        y_data = list(y_data) + [point_price]
         self.line.set_data(x_data, y_data)
 
         # Keep axis constraints for automatic scaling
@@ -109,9 +111,7 @@ class Graphic:
 
         # Calculation of indices for the current page
         start_idx = self.current_page * self.points_per_page
-        end_idx = min(
-            (self.current_page + 1) * self.points_per_page, len(self.x_data)
-        )
+        end_idx = min((self.current_page + 1) * self.points_per_page, len(self.x_data))
 
         # Draw line
         self.ax.plot(
