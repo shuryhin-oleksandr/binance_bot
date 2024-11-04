@@ -10,7 +10,7 @@ matplotlib.use("TkAgg")
 
 class Graphic:
     def __init__(self):
-        self.fig, self.ax = plt.subplots(figsize=(12, 6))
+        self.fig, self.ax = plt.subplots(figsize=(12, 6)) # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
         (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
         self.current_page = 0
@@ -43,7 +43,8 @@ class Graphic:
                 convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
             )
             point_price = point["close"]
-            # Question: Why do we use axes?
+
+            # Add the time and price to respective x and y data lists for plotting
             self.x_data.append(point_time)
             self.y_data.append(point_price)
 
