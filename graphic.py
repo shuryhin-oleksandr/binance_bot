@@ -2,15 +2,24 @@ import matplotlib
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils import convert_unix_to_str
 
 matplotlib.use("TkAgg")
 
+def set_point_price(point):
+    if point["status"] == "high" or  point["status"] == "mid":
+        point["price"] = point["high"]
+    elif point["status"] == "low":
+        point["price"] = point["low"]
+    else:
+        point["price"] = point["close"]
 
 class Graphic:
     def __init__(self):
-        self.fig, self.ax = plt.subplots(figsize=(12, 6)) # axes encapsulates all the elements of an individual (sub-)plot in a figure
+        self.fig, self.ax = plt.subplots(
+            figsize=(12, 6)
+        )  # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
         (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
         self.current_page = 0
@@ -39,14 +48,13 @@ class Graphic:
         self.y_data = []
 
         for point in all_points:
-            point_time = datetime.strptime(
+            point["closeTime"] = datetime.strptime(
                 convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
             )
-            point_price = point["close"]
-
+            set_point_price(point)
             # Add the time and price to respective x and y data lists for plotting
-            self.x_data.append(point_time)
-            self.y_data.append(point_price)
+            self.x_data.append(point["closeTime"])
+            self.y_data.append(point["price"])
 
         max_page = (len(self.x_data) - 1) // self.points_per_page
         self.slider.valmax = max_page  #  Max slider value
@@ -78,13 +86,13 @@ class Graphic:
         y_data = self.line.get_ydata()
 
         # Add new data
-        point_time = datetime.strptime(
+        new_point["closeTime"] = datetime.strptime(
             convert_unix_to_str(new_point["closeTime"]), "%Y-%m-%d %H:%M:%S"
         )
-        point_price = new_point["close"]
+        set_point_price(new_point)
 
-        x_data = list(x_data) + [point_time]
-        y_data = list(y_data) + [point_price]
+        x_data = list(x_data) + [new_point["closeTime"]]
+        y_data = list(y_data) + [new_point["price"]]
         self.line.set_data(x_data, y_data)
 
         # Keep axis constraints for automatic scaling
@@ -132,11 +140,15 @@ class Graphic:
                 high_points.append(kline)
             elif kline["status"] == "low":
                 low_points.append(kline)
+                # Last high point before low must be with label and line
+                self._plot_last_point(high_points[-1], color="k", label="High:")
             elif kline["status"] == "mid":
                 mid_points.append(kline)
+                 # Last low point before mid point must be with label and line
+                self._plot_last_point(low_points[-1], color="r", label="Low:")
 
-        self.plot_all_points(high_points, color="k", label="High:")
-        self.plot_all_points(low_points, color="r", label="Low:")
+        self.plot_all_points(high_points, color="k")
+        self.plot_all_points(low_points, color="r")
 
         for point in mid_points:
             self._plot_last_point(point, color="m", label="Mid:")
@@ -148,11 +160,9 @@ class Graphic:
         self.fig.canvas.draw_idle()
         plt.show()
 
-    def plot_all_points(self, points, color, label=None):
+    def plot_all_points(self, points, color):
         for point in points:
             self._plot_point(point, color=color)
-        if points:
-            self._plot_last_point(points[-1], color=color, label=label)
 
     def _update_plot_with_slider(self, val):
         self.current_page = int(val)
@@ -160,24 +170,20 @@ class Graphic:
 
     def _plot_point(self, point, color):
 
-        point_time = datetime.strptime(
-            convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
-        )
-        point_price = point["close"]
-
-        self.ax.plot(point_time, point_price, color[0] + "o", markersize=4)
-        return point_time, point_price
+        self.ax.plot(point["closeTime"], point["price"], color[0] + "o", markersize=2)
+        return point["closeTime"], point["price"]
 
     def _plot_last_point(self, point, color, label):
+        x_offset = 30
+        y_offset = 100
         if point:
             point_time, point_price = self._plot_point(point, color)
             self.ax.text(
-                point_time,
-                point_price,
+                point_time + timedelta(minutes=x_offset),
+                point_price + y_offset,
                 f"{label} {point_price} {point_time}",
                 fontsize=8,
                 verticalalignment="bottom",
             )
 
-            self._remove_dashed_line(color)
             self.ax.axhline(y=point_price, color=color, linestyle="--", linewidth=0.8)
