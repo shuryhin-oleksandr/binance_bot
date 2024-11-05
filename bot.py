@@ -165,7 +165,7 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
         self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
 
-        # create new empty file 
+        # create new empty file
         file = open(self.output_file, "w")
         file.close()
 
@@ -191,7 +191,7 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
 
             with open(self.output_file, "a") as file:
                 json.dump(processed_klines, file)
-            
+
             # TODO: drawing the graph stops the loop
             if self.graphic:
                 self.graphic.create_plot_for_historical_data(processed_klines)

@@ -100,7 +100,9 @@ class KlineManager:
 
     def find_klines_in_range(self, start_time, end_time):
         return list(
-            self.collection.find({"startTime": {"$gte": start_time, "$lt": end_time}}, {"_id": 0})
+            self.collection.find(
+                {"startTime": {"$gte": start_time, "$lt": end_time}}, {"_id": 0}
+            )
         )
 
     def find_or_fetch_klines_in_range(self, start_time, end_time):

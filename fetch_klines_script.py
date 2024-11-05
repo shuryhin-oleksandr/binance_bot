@@ -13,16 +13,20 @@ def main():
         "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
     )
     parser.add_argument(
-        "start_time", type=parse_date, help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
+        "start_time",
+        type=parse_date,
+        help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "end_time", type=parse_date, help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
+        "end_time",
+        type=parse_date,
+        help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     args = parser.parse_args()
 
     start_timestamp = get_unix_timestamp(args.start_time)
     end_timestamp = get_unix_timestamp(args.end_time)
-    
+
     kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
 
     print(f"Fetching klines from {args.start_time} to {args.end_time}...")

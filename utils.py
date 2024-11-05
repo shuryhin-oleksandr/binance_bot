@@ -5,8 +5,9 @@ import logging
 # Configure the logging level and format
 logger = logging.getLogger("root")
 logger.setLevel(logging.INFO)
-log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', 
-                                  datefmt='%Y-%m-%d %H:%M:%S')
+log_formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 # File Handler
 file_handler = logging.FileHandler("kline_log.log", "w")
@@ -20,6 +21,7 @@ stream_handler.setFormatter(log_formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
+
 def parse_date(date_str):
     try:
         # Try parsing date and time
@@ -27,6 +29,7 @@ def parse_date(date_str):
     except ValueError:
         # If time is missing, set it to "00:00:00" by default
         return datetime.strptime(date_str, "%Y-%m-%d")
+
 
 def get_unix_timestamp(date):
     return int(date.timestamp() * 1000)
@@ -37,9 +40,7 @@ def convert_unix_to_str(unix_timestamp):
 
 
 def get_kline_time(kline):
-    return (
-        f"Start time: {convert_unix_to_str(kline['startTime'])}, Closing Time: {convert_unix_to_str(kline['closeTime'])}"
-    )
+    return f"Start time: {convert_unix_to_str(kline['startTime'])}, Closing Time: {convert_unix_to_str(kline['closeTime'])}"
 
 
 def log_middle_kline(kline):

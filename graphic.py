@@ -7,13 +7,15 @@ from utils import convert_unix_to_str
 
 matplotlib.use("TkAgg")
 
+
 def set_point_price(point):
-    if point["status"] == "high" or  point["status"] == "mid":
+    if point["status"] == "high" or point["status"] == "mid":
         point["price"] = point["high"]
     elif point["status"] == "low":
         point["price"] = point["low"]
     else:
         point["price"] = point["close"]
+
 
 class Graphic:
     def __init__(self):
@@ -144,7 +146,7 @@ class Graphic:
                 self._plot_last_point(high_points[-1], color="k", label="High:")
             elif kline["status"] == "mid":
                 mid_points.append(kline)
-                 # Last low point before mid point must be with label and line
+                # Last low point before mid point must be with label and line
                 self._plot_last_point(low_points[-1], color="r", label="Low:")
 
         self.plot_all_points(high_points, color="k")
