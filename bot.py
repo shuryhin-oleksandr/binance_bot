@@ -7,9 +7,6 @@ from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
-SYMBOL = "BTCUSDT"
-COLLECTION_NAME = f"{SYMBOL.lower()}_klines"
-
 
 def get_min_price(klines, start_index, last_index):
     return min(klines[j]["low"] for j in range(start_index, last_index))
@@ -185,6 +182,9 @@ def main():
         description="Check if a coin price has increased by a certain percentage within a time period."
     )
     parser.add_argument(
+        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
+    )
+    parser.add_argument(
         "--growth_percent",
         type=float,
         default=30,
@@ -213,8 +213,7 @@ def main():
     args = parser.parse_args()
 
     from manager import KlineManager
-
-    kline_manager = KlineManager(MONGO_URL, DB_NAME, COLLECTION_NAME)
+    kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
 
     if args.real_time:
         monitoring = RealTimePriceAnalyzer(

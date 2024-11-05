@@ -2,7 +2,7 @@ import time
 from pymongo import MongoClient
 from bot import TIME_STEP
 from binance_api import get_klines
-from utils import convert_unix_to_str, logging
+from utils import convert_unix_to_str, logger
 
 
 def get_missing_intervals(missing_times):
@@ -33,9 +33,11 @@ def get_missing_intervals(missing_times):
 
 
 class KlineManager:
-    def __init__(self, mongo_uri, db_name, collection_name):
+    def __init__(self, mongo_uri, db_name, symbol):
         self.mongo_client = MongoClient(mongo_uri)
         self.db = self.mongo_client[db_name]
+        self.symbol = symbol
+        collection_name = f"{symbol.lower()}_klines"
         self.collection = self.db[collection_name]
         self.collection.create_index("startTime")
 
@@ -45,7 +47,7 @@ class KlineManager:
 
         while current_time < end_time:
 
-            klines = get_klines(current_time, end_time)
+            klines = get_klines(current_time, end_time, self.symbol)
 
             if not klines:
                 break
@@ -92,7 +94,7 @@ class KlineManager:
 
         self.collection.insert_many(documents)
         insert_klines_end_time = time.time()
-        logging.debug(
+        logger.debug(
             f"Time klines insertion after one request to binance: {insert_klines_end_time - insert_klines_start_time} s"
         )
 
@@ -107,7 +109,7 @@ class KlineManager:
         # Load missing data from API and save it to the database
         missing_times = self.find_missing_klines_time(start_time, end_time)
         if missing_times:
-            logging.warning(
+            logger.warning(
                 f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete. Fetching missing data..."
             )
             missing_intervals = get_missing_intervals(missing_times)
@@ -117,7 +119,7 @@ class KlineManager:
             get_and_save_start_time = time.time()
 
             for interval_start, interval_end in missing_intervals:
-                logging.warning(
+                logger.warning(
                     f"Missing intervals: {(interval_start)} - {(interval_end)}"
                 )
                 self.get_and_save_all_klines(interval_start, interval_end)
@@ -126,7 +128,7 @@ class KlineManager:
                 )
 
             get_and_save_end_time = time.time()
-            logging.info(
+            logger.info(
                 f"Time to get and save all missing klines: {get_and_save_end_time - get_and_save_start_time}s"
             )
 

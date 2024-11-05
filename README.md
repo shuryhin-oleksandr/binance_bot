@@ -39,8 +39,10 @@
     or with default values for growth_percent=30%, drop_percent=10% and time_window=24h:
     `python bot.py --analysis_start_time="2024-10-15" --analysis_end_time="2024-10-15"`
 2. For real-time: `python bot.py --growth_percent=10 --drop_percent=5 --time_window=16 --real_time` or `python bot.py --real_time`
-3. Running with graphic:
-`python bot.py --analysis_start_time="2024-10-15 16:00:00" --analysis_end_time="2024-10-15 20:00:00" --plot_graphic` 
+3. To run with graphic add `--plot_graphic` to the end of the command:
+    Example: `python bot.py --analysis_start_time="2024-10-15 16:00:00" --analysis_end_time="2024-10-15 20:00:00" --plot_graphic` 
+4. To change coin (bitcoin by default) add `--coin_symbol` to the start of the command.
+    Example with Ethereum: `python bot.py --coin_symbol=ETHUSDT --analysis_start_time="2024-10-15" --analysis_end_time="2024-10-15"`
 
 ### Running the script for data uploading
 `python fetch_klines_script.py "2017-06-15" "2019-10-15"` or `python fetch_klines_script.py "2017-06-15 16:00:00" "2019-10-15 16:00:00"`

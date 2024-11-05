@@ -2,12 +2,15 @@ import argparse
 import time
 from manager import KlineManager
 from utils import get_unix_timestamp, parse_date
-from bot import MONGO_URL, DB_NAME, COLLECTION_NAME
+from bot import MONGO_URL, DB_NAME
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Fetch and save klines data from Binance."
+    )
+    parser.add_argument(
+        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
     )
     parser.add_argument(
         "start_time", type=parse_date, help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
@@ -19,7 +22,8 @@ def main():
 
     start_timestamp = get_unix_timestamp(args.start_time)
     end_timestamp = get_unix_timestamp(args.end_time)
-    kline_manager = KlineManager(MONGO_URL, DB_NAME, COLLECTION_NAME)
+    
+    kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
 
     print(f"Fetching klines from {args.start_time} to {args.end_time}...")
     klines_start_time = time.time()

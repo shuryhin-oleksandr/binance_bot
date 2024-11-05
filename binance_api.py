@@ -1,16 +1,15 @@
 import requests
 from utils import convert_unix_to_str, logger
-from bot import SYMBOL
 
 BINANCE_API_URL = "https://api.binance.com/api/v3/klines"
 INTERVAL = "1m"
 LIMIT = 1000
 
 
-def get_klines(start_time, end_time):
+def get_klines(start_time, end_time, symbol):
     """Get candlestick data from Binance API."""
     params = {
-        "symbol": SYMBOL,
+        "symbol": symbol,
         "interval": INTERVAL,
         "startTime": start_time,
         "endTime": end_time,
