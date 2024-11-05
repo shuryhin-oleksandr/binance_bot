@@ -1,7 +1,7 @@
 import argparse
 import time
 from manager import KlineManager
-from utils import get_unix_timestamp
+from utils import get_unix_timestamp, parse_date
 from bot import MONGO_URL, DB_NAME, COLLECTION_NAME
 
 
@@ -10,10 +10,10 @@ def main():
         description="Fetch and save klines data from Binance."
     )
     parser.add_argument(
-        "start_time", type=str, help="Start time in format YYYY-MM-DD HH:MM:SS"
+        "start_time", type=parse_date, help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
     )
     parser.add_argument(
-        "end_time", type=str, help="End time in format YYYY-MM-DD HH:MM:SS"
+        "end_time", type=parse_date, help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
     )
     args = parser.parse_args()
 

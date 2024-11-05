@@ -2,7 +2,7 @@ import math
 import time
 import argparse
 from graphic import Graphic
-from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline
+from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline, parse_date
 
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
@@ -185,25 +185,27 @@ def main():
         description="Check if a coin price has increased by a certain percentage within a time period."
     )
     parser.add_argument(
-        "target_price_growth_percent",
+        "--growth_percent",
         type=float,
+        default=30,
         help="Percentage rised threshold (X%)",
     )
     parser.add_argument(
-        "target_price_drop_percent", type=float, help="Percentage drop threshold (Y%)"
+        "--drop_percent", type=float, default=10, help="Percentage drop threshold (Y%)"
     )
     parser.add_argument(
-        "time_window",
+        "--time_window",
         type=int,
+        default=24,
         help="Time window in hours to check the price increase (Yhr)",
     )
     parser.add_argument(
         "--analysis_start_time",
-        type=str,
-        help="Start time in format YYYY-MM-DD HH:MM:SS",
+        type=parse_date,
+        help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "--analysis_end_time", type=str, help="End time in format YYYY-MM-DD HH:MM:SS"
+        "--analysis_end_time", type=parse_date, help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
     )
     parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
     parser.add_argument("--plot_graphic", action="store_true", help="Plot graphic")
@@ -218,8 +220,8 @@ def main():
         monitoring = RealTimePriceAnalyzer(
             kline_manager,
             args.time_window,
-            args.target_price_growth_percent,
-            args.target_price_drop_percent,
+            args.growth_percent,
+            args.drop_percent,
             args.plot_graphic,
         )
     else:
@@ -228,8 +230,8 @@ def main():
         monitoring = HistoricalPriceAnalyzer(
             kline_manager,
             args.time_window,
-            args.target_price_growth_percent,
-            args.target_price_drop_percent,
+            args.growth_percent,
+            args.drop_percent,
             args.plot_graphic,
             args.analysis_start_time,
             args.analysis_end_time,

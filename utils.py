@@ -20,9 +20,16 @@ stream_handler.setFormatter(log_formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
+def parse_date(date_str):
+    try:
+        # Try parsing date and time
+        return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        # If time is missing, set it to "00:00:00" by default
+        return datetime.strptime(date_str, "%Y-%m-%d")
 
-def get_unix_timestamp(date_str):
-    return int(datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").timestamp() * 1000)
+def get_unix_timestamp(date):
+    return int(date.timestamp() * 1000)
 
 
 def convert_unix_to_str(unix_timestamp):
