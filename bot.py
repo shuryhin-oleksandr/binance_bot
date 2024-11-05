@@ -99,31 +99,24 @@ class PriceAnalyzer:
 
         return kline
 
-    def _analyzed_time_interval(self, klines, current_time):
+    def _analyzed_time_interval(self):
+        return int(self.time_window / TIME_STEP)
 
-        for i, kline in enumerate(klines):
-            if kline["closeTime"] >= current_time:  # first kline index >= current time
-                return i
-
-        return len(klines) - 1  # end list of klines
-
-    def _analyze_klines(self, klines, current_time):
+    def _analyze_klines(self, klines):
         """
         Analyze a list of kline data within a specified time interval.
-        - This function uses the `current_time` and calculates the starting index for analysis based
-          on the time interval determined by `_analyzed_time_interval`.
         - For each kline, it calculates the minimum price within the time window and
           applies `_analyze_kline` to perform specific processing.
         """
         processed_klines = []
-        analysis_start_index = self._analyzed_time_interval(
-            klines, current_time
+        analysis_start_index = (
+            self._analyzed_time_interval()
         )  # the time index of the start of the analysis (the lower limit of the interval)
 
         for index in range(analysis_start_index, len(klines)):
             current_kline = klines[index]
-            min_search_start = self._analyzed_time_interval(
-                klines, current_time - self.time_window
+            min_search_start = (
+                index - analysis_start_index
             )  # find the start index for searching for minimum values within the time window Y hours
             min_price = get_min_price(klines, min_search_start, index)
             processed_klines.append(self._analyze_kline(current_kline, min_price))
@@ -145,7 +138,7 @@ class RealTimePriceAnalyzer(PriceAnalyzer):
             klines = self.kline_manager.find_or_fetch_klines_in_range(
                 start_time, current_time
             )
-            processed_klines = self._analyze_klines(klines, current_time)
+            processed_klines = self._analyze_klines(klines)
             if self.graphic:
                 self.graphic.update_plot_real_time(processed_klines[-1])
 
@@ -179,7 +172,6 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
         )  # klines size ~ 0.5 Gb
 
-        # TODO: Refine chunk_analysis_start_time naming
         while chunk_analysis_start_time < self.analysis_end_time:
             chunk_start_time = (
                 chunk_analysis_start_time - self.time_window
@@ -191,9 +183,7 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             chunk_klines = self.kline_manager.find_or_fetch_klines_in_range(
                 chunk_start_time, chunk_end_time
             )
-            processed_klines = self._analyze_klines(
-                chunk_klines, chunk_analysis_start_time
-            )
+            processed_klines = self._analyze_klines(chunk_klines)
             chunk_analysis_start_time = chunk_end_time
 
             if self.graphic:
