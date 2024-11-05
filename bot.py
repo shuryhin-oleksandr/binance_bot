@@ -2,16 +2,6 @@ import math
 import time
 import argparse
 from graphic import Graphic
-import logging
-
-# Configure the logging level and format
-logging.basicConfig(
-    filename="kline_log.log",  # Specify the log file name
-    level=logging.INFO,  # Set the log level
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    filemode="w",  # Use 'w' to overwrite the log file each run, or 'a' to append
-)
-
 from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline
 
 TIME_STEP = 1 * 60 * 1000  # one minute in unix

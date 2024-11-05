@@ -1,6 +1,5 @@
 import requests
-import logging
-from utils import convert_unix_to_str
+from utils import convert_unix_to_str, logger
 from bot import SYMBOL
 
 BINANCE_API_URL = "https://api.binance.com/api/v3/klines"
@@ -21,7 +20,7 @@ def get_klines(start_time, end_time):
     klines = response.json()
 
     if not klines:
-        logging.error(
+        logger.error(
             f"Data not found for the interval: {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)}"
         )
 

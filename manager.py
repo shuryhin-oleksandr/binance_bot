@@ -1,9 +1,8 @@
 import time
-import logging
 from pymongo import MongoClient
 from bot import TIME_STEP
 from binance_api import get_klines
-from utils import convert_unix_to_str
+from utils import convert_unix_to_str, logging
 
 
 def get_missing_intervals(missing_times):
@@ -72,7 +71,7 @@ class KlineManager:
 
     def save_klines(self, klines):
         documents = []
-
+        insert_klines_start_time = time.time()
         for kline in klines:
             document = {
                 "startTime": kline[0],
@@ -91,11 +90,10 @@ class KlineManager:
 
             documents.append(document)
 
-        insert_klines_start_time = time.time()
         self.collection.insert_many(documents)
         insert_klines_end_time = time.time()
-        logging.info(
-            f"Time for insert klines: {insert_klines_end_time - insert_klines_start_time} s"
+        logging.debug(
+            f"Time klines insertion after one request to binance: {insert_klines_end_time - insert_klines_start_time} s"
         )
 
     def find_klines_in_range(self, start_time, end_time):
@@ -116,14 +114,21 @@ class KlineManager:
 
             # Fetch and save missing data for each interval
             missing_klines = []
+            get_and_save_start_time = time.time()
+
             for interval_start, interval_end in missing_intervals:
                 logging.warning(
-                    f"Missing intervals: {convert_unix_to_str(interval_start)} - {convert_unix_to_str(interval_end)}"
+                    f"Missing intervals: {(interval_start)} - {(interval_end)}"
                 )
                 self.get_and_save_all_klines(interval_start, interval_end)
                 missing_klines += self.find_klines_in_range(
                     interval_start, interval_end
                 )
+
+            get_and_save_end_time = time.time()
+            logging.info(
+                f"Time to get and save all missing klines: {get_and_save_end_time - get_and_save_start_time}s"
+            )
 
             # Add new data to existing ones
             klines += missing_klines
