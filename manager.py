@@ -1,9 +1,8 @@
 import time
-import logging
 from pymongo import MongoClient
 from bot import TIME_STEP
 from binance_api import get_klines
-from utils import convert_unix_to_str
+from utils import convert_unix_to_str, logger
 
 
 def get_missing_intervals(missing_times):
@@ -34,9 +33,11 @@ def get_missing_intervals(missing_times):
 
 
 class KlineManager:
-    def __init__(self, mongo_uri, db_name, collection_name):
+    def __init__(self, mongo_uri, db_name, symbol):
         self.mongo_client = MongoClient(mongo_uri)
         self.db = self.mongo_client[db_name]
+        self.symbol = symbol
+        collection_name = f"{symbol.lower()}_klines"
         self.collection = self.db[collection_name]
         self.collection.create_index("startTime")
 
@@ -46,7 +47,7 @@ class KlineManager:
 
         while current_time < end_time:
 
-            klines = get_klines(current_time, end_time)
+            klines = get_klines(current_time, end_time, self.symbol)
 
             if not klines:
                 break
@@ -72,7 +73,7 @@ class KlineManager:
 
     def save_klines(self, klines):
         documents = []
-
+        insert_klines_start_time = time.time()
         for kline in klines:
             document = {
                 "startTime": kline[0],
@@ -91,16 +92,17 @@ class KlineManager:
 
             documents.append(document)
 
-        insert_klines_start_time = time.time()
         self.collection.insert_many(documents)
         insert_klines_end_time = time.time()
-        logging.info(
-            f"Time for insert klines: {insert_klines_end_time - insert_klines_start_time} s"
+        logger.debug(
+            f"Time klines insertion after one request to binance: {insert_klines_end_time - insert_klines_start_time} s"
         )
 
     def find_klines_in_range(self, start_time, end_time):
         return list(
-            self.collection.find({"startTime": {"$gte": start_time, "$lt": end_time}})
+            self.collection.find(
+                {"startTime": {"$gte": start_time, "$lt": end_time}}, {"_id": 0}
+            )
         )
 
     def find_or_fetch_klines_in_range(self, start_time, end_time):
@@ -109,21 +111,28 @@ class KlineManager:
         # Load missing data from API and save it to the database
         missing_times = self.find_missing_klines_time(start_time, end_time)
         if missing_times:
-            logging.warning(
+            logger.warning(
                 f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete. Fetching missing data..."
             )
             missing_intervals = get_missing_intervals(missing_times)
 
             # Fetch and save missing data for each interval
             missing_klines = []
+            get_and_save_start_time = time.time()
+
             for interval_start, interval_end in missing_intervals:
-                logging.warning(
-                    f"Missing intervals: {convert_unix_to_str(interval_start)} - {convert_unix_to_str(interval_end)}"
+                logger.warning(
+                    f"Missing intervals: {(interval_start)} - {(interval_end)}"
                 )
                 self.get_and_save_all_klines(interval_start, interval_end)
                 missing_klines += self.find_klines_in_range(
                     interval_start, interval_end
                 )
+
+            get_and_save_end_time = time.time()
+            logger.info(
+                f"Time to get and save all missing klines: {get_and_save_end_time - get_and_save_start_time}s"
+            )
 
             # Add new data to existing ones
             klines += missing_klines

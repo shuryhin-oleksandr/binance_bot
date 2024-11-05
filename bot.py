@@ -1,24 +1,20 @@
 import math
 import time
 import argparse
+import json
 from graphic import Graphic
-import logging
-
-# Configure the logging level and format
-logging.basicConfig(
-    filename="kline_log.log",  # Specify the log file name
-    level=logging.INFO,  # Set the log level
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    filemode="w",  # Use 'w' to overwrite the log file each run, or 'a' to append
+from utils import (
+    get_unix_timestamp,
+    convert_unix_to_str,
+    log_high_kline,
+    log_low_kline,
+    log_middle_kline,
+    parse_date,
 )
-
-from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline
 
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
-SYMBOL = "BTCUSDT"
-COLLECTION_NAME = f"{SYMBOL.lower()}_klines"
 
 
 def get_min_price(klines, start_index, last_index):
@@ -99,31 +95,24 @@ class PriceAnalyzer:
 
         return kline
 
-    def _analyzed_time_interval(self, klines, current_time):
+    def _analyzed_time_interval(self):
+        return int(self.time_window / TIME_STEP)
 
-        for i, kline in enumerate(klines):
-            if kline["closeTime"] >= current_time:  # first kline index >= current time
-                return i
-
-        return len(klines) - 1  # end list of klines
-
-    def _analyze_klines(self, klines, current_time):
+    def _analyze_klines(self, klines):
         """
         Analyze a list of kline data within a specified time interval.
-        - This function uses the `current_time` and calculates the starting index for analysis based
-          on the time interval determined by `_analyzed_time_interval`.
         - For each kline, it calculates the minimum price within the time window and
           applies `_analyze_kline` to perform specific processing.
         """
         processed_klines = []
-        analysis_start_index = self._analyzed_time_interval(
-            klines, current_time
+        analysis_start_index = (
+            self._analyzed_time_interval()
         )  # the time index of the start of the analysis (the lower limit of the interval)
 
         for index in range(analysis_start_index, len(klines)):
             current_kline = klines[index]
-            min_search_start = self._analyzed_time_interval(
-                klines, current_time - self.time_window
+            min_search_start = (
+                index - analysis_start_index
             )  # find the start index for searching for minimum values within the time window Y hours
             min_price = get_min_price(klines, min_search_start, index)
             processed_klines.append(self._analyze_kline(current_kline, min_price))
@@ -145,7 +134,7 @@ class RealTimePriceAnalyzer(PriceAnalyzer):
             klines = self.kline_manager.find_or_fetch_klines_in_range(
                 start_time, current_time
             )
-            processed_klines = self._analyze_klines(klines, current_time)
+            processed_klines = self._analyze_klines(klines)
             if self.graphic:
                 self.graphic.update_plot_real_time(processed_klines[-1])
 
@@ -172,6 +161,13 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         )
         self.analysis_start_time = get_unix_timestamp(analysis_start_time)
         self.analysis_end_time = get_unix_timestamp(analysis_end_time)
+        str_start_time = convert_unix_to_str(self.analysis_start_time).replace(" ", "_")
+        str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
+        self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
+
+        # create new empty file
+        file = open(self.output_file, "w")
+        file.close()
 
     def monitoring(self):
         chunk_analysis_start_time = self.analysis_start_time
@@ -179,7 +175,6 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
         )  # klines size ~ 0.5 Gb
 
-        # TODO: Refine chunk_analysis_start_time naming
         while chunk_analysis_start_time < self.analysis_end_time:
             chunk_start_time = (
                 chunk_analysis_start_time - self.time_window
@@ -191,11 +186,13 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             chunk_klines = self.kline_manager.find_or_fetch_klines_in_range(
                 chunk_start_time, chunk_end_time
             )
-            processed_klines = self._analyze_klines(
-                chunk_klines, chunk_analysis_start_time
-            )
+            processed_klines = self._analyze_klines(chunk_klines)
             chunk_analysis_start_time = chunk_end_time
 
+            with open(self.output_file, "a") as file:
+                json.dump(processed_klines, file)
+
+            # TODO: drawing the graph stops the loop
             if self.graphic:
                 self.graphic.create_plot_for_historical_data(processed_klines)
 
@@ -205,25 +202,32 @@ def main():
         description="Check if a coin price has increased by a certain percentage within a time period."
     )
     parser.add_argument(
-        "target_price_growth_percent",
+        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
+    )
+    parser.add_argument(
+        "--growth_percent",
         type=float,
+        default=30,
         help="Percentage rised threshold (X%)",
     )
     parser.add_argument(
-        "target_price_drop_percent", type=float, help="Percentage drop threshold (Y%)"
+        "--drop_percent", type=float, default=10, help="Percentage drop threshold (Y%)"
     )
     parser.add_argument(
-        "time_window",
+        "--time_window",
         type=int,
+        default=24,
         help="Time window in hours to check the price increase (Yhr)",
     )
     parser.add_argument(
         "--analysis_start_time",
-        type=str,
-        help="Start time in format YYYY-MM-DD HH:MM:SS",
+        type=parse_date,
+        help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "--analysis_end_time", type=str, help="End time in format YYYY-MM-DD HH:MM:SS"
+        "--analysis_end_time",
+        type=parse_date,
+        help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
     parser.add_argument("--plot_graphic", action="store_true", help="Plot graphic")
@@ -232,14 +236,14 @@ def main():
 
     from manager import KlineManager
 
-    kline_manager = KlineManager(MONGO_URL, DB_NAME, COLLECTION_NAME)
+    kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
 
     if args.real_time:
         monitoring = RealTimePriceAnalyzer(
             kline_manager,
             args.time_window,
-            args.target_price_growth_percent,
-            args.target_price_drop_percent,
+            args.growth_percent,
+            args.drop_percent,
             args.plot_graphic,
         )
     else:
@@ -248,8 +252,8 @@ def main():
         monitoring = HistoricalPriceAnalyzer(
             kline_manager,
             args.time_window,
-            args.target_price_growth_percent,
-            args.target_price_drop_percent,
+            args.growth_percent,
+            args.drop_percent,
             args.plot_graphic,
             args.analysis_start_time,
             args.analysis_end_time,
