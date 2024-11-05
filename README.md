@@ -43,6 +43,7 @@
     Example: `python bot.py --analysis_start_time="2024-10-15 16:00:00" --analysis_end_time="2024-10-15 20:00:00" --plot_graphic` 
 4. To change coin (bitcoin by default) add `--coin_symbol` to the start of the command.
     Example with Ethereum: `python bot.py --coin_symbol=ETHUSDT --analysis_start_time="2024-10-15" --analysis_end_time="2024-10-15"`
+5. To plot graph with ready points: `python plot_from_json.py "processed_klines_BTCUSDT_2023-11-05_16:00:00_2024-11-05_12:00:00.json"`
 
 ### Running the script for data uploading
 `python fetch_klines_script.py "2017-06-15" "2019-10-15"` or `python fetch_klines_script.py "2017-06-15 16:00:00" "2019-10-15 16:00:00"`

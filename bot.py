@@ -1,12 +1,21 @@
 import math
 import time
 import argparse
+import json
 from graphic import Graphic
-from utils import get_unix_timestamp, log_high_kline, log_low_kline, log_middle_kline, parse_date
+from utils import (
+    get_unix_timestamp,
+    convert_unix_to_str,
+    log_high_kline,
+    log_low_kline,
+    log_middle_kline,
+    parse_date,
+)
 
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
+
 
 def get_min_price(klines, start_index, last_index):
     return min(klines[j]["low"] for j in range(start_index, last_index))
@@ -152,6 +161,13 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         )
         self.analysis_start_time = get_unix_timestamp(analysis_start_time)
         self.analysis_end_time = get_unix_timestamp(analysis_end_time)
+        str_start_time = convert_unix_to_str(self.analysis_start_time).replace(" ", "_")
+        str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
+        self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
+
+        # create new empty file 
+        file = open(self.output_file, "w")
+        file.close()
 
     def monitoring(self):
         chunk_analysis_start_time = self.analysis_start_time
@@ -173,6 +189,10 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             processed_klines = self._analyze_klines(chunk_klines)
             chunk_analysis_start_time = chunk_end_time
 
+            with open(self.output_file, "a") as file:
+                json.dump(processed_klines, file)
+            
+            # TODO: drawing the graph stops the loop
             if self.graphic:
                 self.graphic.create_plot_for_historical_data(processed_klines)
 
@@ -205,7 +225,9 @@ def main():
         help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "--analysis_end_time", type=parse_date, help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD"
+        "--analysis_end_time",
+        type=parse_date,
+        help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
     parser.add_argument("--plot_graphic", action="store_true", help="Plot graphic")
@@ -213,6 +235,7 @@ def main():
     args = parser.parse_args()
 
     from manager import KlineManager
+
     kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
 
     if args.real_time:
