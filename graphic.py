@@ -23,7 +23,7 @@ class Graphic:
             figsize=(12, 6)
         )  # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
-        (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
+        (self.line,) = self.ax.plot([], [], "darkgrey", label="All Prices", markersize=1)
         self.current_page = 0
         self.points_per_page = 1440 * 100  # ~ 100days
         self.slider = self._create_slider()
@@ -99,11 +99,11 @@ class Graphic:
 
         # Show high, low, and mid points
         if new_point["status"] == "high":
-            self._plot_last_point(new_point, "g", "High:")
+            self._plot_last_point(new_point, "green", "High:")
         elif new_point["status"] == "low":
-            self._plot_last_point(new_point, "r", "Low:")
+            self._plot_last_point(new_point, "red", "Low:")
         elif new_point["status"] == "mid":
-            self._plot_last_point(new_point, "y", "Mid:")
+            self._plot_last_point(new_point, "orange", "Mid:")
 
         self.fig.canvas.draw_idle()
         plt.show()
@@ -121,7 +121,7 @@ class Graphic:
         self.ax.plot(
             self.x_data[start_idx:end_idx],
             self.y_data[start_idx:end_idx],
-            "bo-",
+            "darkgrey",
             label="All Prices",
             markersize=1,
         )
@@ -137,17 +137,17 @@ class Graphic:
             elif kline["status"] == "low":
                 low_points.append(kline)
                 # Last high point before low must be with label
-                self._plot_last_point(high_points[-1], color="g", label="High:", markersize=4)
+                self._plot_last_point(high_points[-1], color="green", label="High:", markersize=4)
             elif kline["status"] == "mid":
                 mid_points.append(kline)
                 # Last low point before mid point must be with label
-                self._plot_last_point(low_points[-1], color="r", label="Low:", markersize=4)
+                self._plot_last_point(low_points[-1], color="red", label="Low:", markersize=4)
 
-        self.plot_all_points(high_points, color="g")
-        self.plot_all_points(low_points, color="r")
+        self.plot_all_points(high_points, color="green")
+        self.plot_all_points(low_points, color="red")
 
         for point in mid_points:
-            self._plot_last_point(point, color="y", label="Mid:", markersize=4)
+            self._plot_last_point(point, color="orange", label="Mid:", markersize=4)
 
         self.ax.relim()
         self.ax.autoscale_view()
@@ -165,8 +165,7 @@ class Graphic:
         self.paginate_plot()
 
     def _plot_point(self, point, color, markersize=2):
-
-        self.ax.plot(point["closeTime"], point["price"], color[0] + "o", markersize=markersize)
+        self.ax.plot(point["closeTime"], point["price"], marker="o", color=color, markersize=markersize)
         return point["closeTime"], point["price"]
 
     def _plot_last_point(self, point, color, label, markersize=2):
