@@ -1,8 +1,9 @@
 import math
-import time
 import argparse
 import json
+from datetime import datetime
 from graphic import Graphic
+from binance_api import get_klines
 from utils import (
     get_unix_timestamp,
     convert_unix_to_str,
@@ -127,7 +128,7 @@ class RealTimePriceAnalyzer(PriceAnalyzer):
 
     def monitoring(self):
         while True:
-            current_time = int(time.time() * 1000)
+            current_time = int(datetime.now() * 1000)
             start_time = (
                 current_time - self.time_window
             )  # get data starting from now - Yhr
@@ -159,8 +160,8 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             target_price_drop_percent,
             plot_graphic,
         )
-        self.analysis_start_time = get_unix_timestamp(analysis_start_time)
-        self.analysis_end_time = get_unix_timestamp(analysis_end_time)
+        self.analysis_start_time = analysis_start_time
+        self.analysis_end_time = analysis_end_time
         str_start_time = convert_unix_to_str(self.analysis_start_time).replace(" ", "_")
         str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
         self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
@@ -227,6 +228,7 @@ def main():
     parser.add_argument(
         "--analysis_end_time",
         type=parse_date,
+        default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
@@ -247,16 +249,24 @@ def main():
             args.plot_graphic,
         )
     else:
-        if not args.analysis_start_time or not args.analysis_end_time:
-            raise ValueError("Set start time and end time interval for analysis.")
+        analysis_end_time = get_unix_timestamp(args.analysis_end_time)
+        if not args.analysis_start_time:
+            binance_foundation_date = get_unix_timestamp(datetime.strptime("2017-07-01", "%Y-%m-%d"))
+            # get kline to to check the date of the first kline in binance
+            klines = get_klines(binance_foundation_date, analysis_end_time, args.coin_symbol)
+            # find start time for analysis
+            analysis_start_time = int(klines[0][0]) + args.time_window * 60 * 60 * 1000
+        else:
+            analysis_start_time = get_unix_timestamp(args.analysis_start_time)
+
         monitoring = HistoricalPriceAnalyzer(
             kline_manager,
             args.time_window,
             args.growth_percent,
             args.drop_percent,
             args.plot_graphic,
-            args.analysis_start_time,
-            args.analysis_end_time,
+            analysis_start_time,
+            analysis_end_time,
         )
 
     monitoring.monitoring()

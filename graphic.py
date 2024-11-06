@@ -23,7 +23,7 @@ class Graphic:
             figsize=(12, 6)
         )  # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
-        (self.line,) = self.ax.plot([], [], "bo-", label="All Prices", markersize=1)
+        (self.line,) = self.ax.plot([], [], "darkgrey", label="All Prices", markersize=1)
         self.current_page = 0
         self.points_per_page = 1440 * 100  # ~ 100days
         self.slider = self._create_slider()
@@ -76,12 +76,6 @@ class Graphic:
                 ):
                     child.remove()
 
-    def _remove_dashed_line(self, color):
-        for child in self.ax.get_children():
-            if isinstance(child, plt.Line2D) and child.get_linestyle() == "--":
-                if child.get_color() == color:
-                    child.remove()
-
     def update_plot_real_time(self, new_point):
         # Get data
         x_data = self.line.get_xdata()
@@ -105,11 +99,11 @@ class Graphic:
 
         # Show high, low, and mid points
         if new_point["status"] == "high":
-            self._plot_last_point(new_point, "k", "High:")
+            self._plot_last_point(new_point, "green", "High:")
         elif new_point["status"] == "low":
-            self._plot_last_point(new_point, "r", "Low:")
+            self._plot_last_point(new_point, "red", "Low:")
         elif new_point["status"] == "mid":
-            self._plot_last_point(new_point, "m", "Mid:")
+            self._plot_last_point(new_point, "orange", "Mid:")
 
         self.fig.canvas.draw_idle()
         plt.show()
@@ -127,7 +121,7 @@ class Graphic:
         self.ax.plot(
             self.x_data[start_idx:end_idx],
             self.y_data[start_idx:end_idx],
-            "bo-",
+            "darkgrey",
             label="All Prices",
             markersize=1,
         )
@@ -142,18 +136,18 @@ class Graphic:
                 high_points.append(kline)
             elif kline["status"] == "low":
                 low_points.append(kline)
-                # Last high point before low must be with label and line
-                self._plot_last_point(high_points[-1], color="k", label="High:")
+                # Last high point before low must be with label
+                self._plot_last_point(high_points[-1], color="green", label="High:", markersize=4)
             elif kline["status"] == "mid":
                 mid_points.append(kline)
-                # Last low point before mid point must be with label and line
-                self._plot_last_point(low_points[-1], color="r", label="Low:")
+                # Last low point before mid point must be with label
+                self._plot_last_point(low_points[-1], color="red", label="Low:", markersize=4)
 
-        self.plot_all_points(high_points, color="k")
-        self.plot_all_points(low_points, color="r")
+        self.plot_all_points(high_points, color="green")
+        self.plot_all_points(low_points, color="red")
 
         for point in mid_points:
-            self._plot_last_point(point, color="m", label="Mid:")
+            self._plot_last_point(point, color="orange", label="Mid:", markersize=4)
 
         self.ax.relim()
         self.ax.autoscale_view()
@@ -170,16 +164,15 @@ class Graphic:
         self.current_page = int(val)
         self.paginate_plot()
 
-    def _plot_point(self, point, color):
-
-        self.ax.plot(point["closeTime"], point["price"], color[0] + "o", markersize=2)
+    def _plot_point(self, point, color, markersize=2):
+        self.ax.plot(point["closeTime"], point["price"], marker="o", color=color, markersize=markersize)
         return point["closeTime"], point["price"]
 
-    def _plot_last_point(self, point, color, label):
+    def _plot_last_point(self, point, color, label, markersize=2):
         x_offset = 30
         y_offset = 100
         if point:
-            point_time, point_price = self._plot_point(point, color)
+            point_time, point_price = self._plot_point(point, color, markersize)
             self.ax.text(
                 point_time + timedelta(minutes=x_offset),
                 point_price + y_offset,
@@ -187,5 +180,3 @@ class Graphic:
                 fontsize=8,
                 verticalalignment="bottom",
             )
-
-            self.ax.axhline(y=point_price, color=color, linestyle="--", linewidth=0.8)
