@@ -1,21 +1,11 @@
 import matplotlib
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
-from datetime import datetime, timedelta
+from matplotlib.widgets import Button, TextBox
+from datetime import datetime
 from utils import convert_unix_to_str
 
 matplotlib.use("TkAgg")
-
-
-def set_point_price(point):
-    if point["status"] == "high" or point["status"] == "mid":
-        point["price"] = point["high"]
-    elif point["status"] == "low":
-        point["price"] = point["low"]
-    else:
-        point["price"] = point["close"]
-
 
 class Graphic:
     def __init__(self):
@@ -26,7 +16,7 @@ class Graphic:
         (self.line,) = self.ax.plot([], [], "darkgrey", label="All Prices", markersize=1)
         self.current_page = 0
         self.points_per_page = 1440 * 100  # ~ 100days
-        self.slider = self._create_slider()
+        self._create_pagination_controls()
 
     def _initialize_plot(self):
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
@@ -36,13 +26,39 @@ class Graphic:
         self.ax.set_xlabel("Date")
         self.ax.set_ylabel("Price")
 
-    def _create_slider(self):
-        slider_ax = self.fig.add_axes(
-            [0.2, 0.02, 0.6, 0.03], facecolor="lightgoldenrodyellow"
-        )
-        slider = Slider(slider_ax, "Page", 0, 1, valinit=0, valstep=1)
-        slider.on_changed(self._update_plot_with_slider)
-        return slider
+    def _create_pagination_controls(self):
+        # Text box for setting points per page
+        ax_textbox = plt.axes([0.1, 0.01, 0.1, 0.05])
+        self.textbox = TextBox(ax_textbox, 'Points per page:', initial=str(self.points_per_page))
+        self.textbox.on_submit(self._set_points_per_page)
+
+        # Previous button
+        ax_prev = plt.axes([0.3, 0.01, 0.1, 0.05])
+        self.prev_button = Button(ax_prev, 'Previous')
+        self.prev_button.on_clicked(self._prev_page)
+
+        # Next button
+        ax_next = plt.axes([0.45, 0.01, 0.1, 0.05])
+        self.next_button = Button(ax_next, 'Next')
+        self.next_button.on_clicked(self._next_page)
+
+    def _set_points_per_page(self, text):
+        try:
+            self.points_per_page = max(1, int(text))  # Ensures at least 1 point per page
+            self.current_page = 0
+            self.paginate_plot()
+        except ValueError:
+            pass
+
+    def _prev_page(self, event):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.paginate_plot()
+
+    def _next_page(self, event):
+        if (self.current_page + 1) * self.points_per_page < len(self.x_data):
+            self.current_page += 1
+            self.paginate_plot()
 
     def create_plot_for_historical_data(self, all_points):
         self.all_points = all_points
@@ -50,21 +66,12 @@ class Graphic:
         self.y_data = []
 
         for point in all_points:
-            point["closeTime"] = datetime.strptime(
-                convert_unix_to_str(point["closeTime"]), "%Y-%m-%d %H:%M:%S"
+            point["time"] = datetime.strptime(
+                convert_unix_to_str(point["time"]), "%Y-%m-%d %H:%M:%S"
             )
-            set_point_price(point)
             # Add the time and price to respective x and y data lists for plotting
-            self.x_data.append(point["closeTime"])
+            self.x_data.append(point["time"])
             self.y_data.append(point["price"])
-
-        max_page = (len(self.x_data) - 1) // self.points_per_page
-        self.slider.valmax = max_page  #  Max slider value
-        self.slider.ax.set_xlim(
-            0, max_page
-        )  # Display the slider scale according to the number of pages
-        self.slider.set_val(0)  # Set first page
-        self.slider.ax.figure.canvas.draw_idle()
 
         self.paginate_plot()
 
@@ -82,12 +89,10 @@ class Graphic:
         y_data = self.line.get_ydata()
 
         # Add new data
-        new_point["closeTime"] = datetime.strptime(
-            convert_unix_to_str(new_point["closeTime"]), "%Y-%m-%d %H:%M:%S"
+        new_point["time"] = datetime.strptime(
+            convert_unix_to_str(new_point["time"]), "%Y-%m-%d %H:%M:%S"
         )
-        set_point_price(new_point)
-
-        x_data = list(x_data) + [new_point["closeTime"]]
+        x_data = list(x_data) + [new_point["time"]]
         y_data = list(y_data) + [new_point["price"]]
         self.line.set_data(x_data, y_data)
 
@@ -137,11 +142,13 @@ class Graphic:
             elif kline["status"] == "low":
                 low_points.append(kline)
                 # Last high point before low must be with label
-                self._plot_last_point(high_points[-1], color="green", label="High:", markersize=4)
+                if high_points:
+                    self._plot_last_point(high_points[-1], color="green", label="High:", markersize=4)
             elif kline["status"] == "mid":
                 mid_points.append(kline)
                 # Last low point before mid point must be with label
-                self._plot_last_point(low_points[-1], color="red", label="Low:", markersize=4)
+                if low_points:
+                    self._plot_last_point(low_points[-1], color="red", label="Low:", markersize=4)
 
         self.plot_all_points(high_points, color="green")
         self.plot_all_points(low_points, color="red")
@@ -160,22 +167,16 @@ class Graphic:
         for point in points:
             self._plot_point(point, color=color)
 
-    def _update_plot_with_slider(self, val):
-        self.current_page = int(val)
-        self.paginate_plot()
-
     def _plot_point(self, point, color, markersize=2):
-        self.ax.plot(point["closeTime"], point["price"], marker="o", color=color, markersize=markersize)
-        return point["closeTime"], point["price"]
+        self.ax.plot(point["time"], point["price"], marker="o", color=color, markersize=markersize)
+        return point["time"], point["price"]
 
     def _plot_last_point(self, point, color, label, markersize=2):
-        x_offset = 30
-        y_offset = 100
         if point:
             point_time, point_price = self._plot_point(point, color, markersize)
             self.ax.text(
-                point_time + timedelta(minutes=x_offset),
-                point_price + y_offset,
+                point_time,
+                point_price,
                 f"{label} {point_price} {point_time}",
                 fontsize=8,
                 verticalalignment="bottom",

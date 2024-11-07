@@ -1,6 +1,7 @@
 import math
 import argparse
 import json
+import time
 from datetime import datetime
 from graphic import Graphic
 from binance_api import get_klines
@@ -49,7 +50,9 @@ class PriceAnalyzer:
 
     def _analyze_kline(self, kline, min_price):
         high_price = kline["high"]
-        kline["status"] = ""  # all klines with status low, high, mid or none
+        processed_kline = {} # create a new dict to save only the data needed for plotting
+        processed_kline["status"] = ""  # all klines with status low, high, mid or none
+        processed_kline["time"] = kline["closeTime"] # save the closeTime as x coordinate to show the kline
 
         calculated_target_price_growth_percent = (
             (high_price - min_price) / min_price
@@ -62,10 +65,11 @@ class PriceAnalyzer:
             kline["target_price_growth_percent"] = (
                 calculated_target_price_growth_percent
             )
-            kline["status"] = "high"
+            processed_kline["status"] = "high"
+            processed_kline["price"] = kline["high"] # save the high price as y coordinate to show the kline
             self.high_kline = kline
             log_high_kline(kline)
-            return kline
+            return processed_kline
 
         # TODO: Add phase property, which can be one of: idle, high_found, low_found, mid_found
         low_price = kline["low"]
@@ -79,22 +83,25 @@ class PriceAnalyzer:
                 and self._is_lowest_kline(kline)
             ):
                 self.low_kline = kline
-                kline["status"] = "low"
+                processed_kline["status"] = "low"
+                processed_kline["price"] = kline["low"]
                 self.mid_price = math.sqrt(
                     self.high_kline["high"] * self.low_kline["low"]
                 )
                 self.mid_kline = None
                 log_low_kline(kline)
-                return kline
+                return processed_kline
 
         if self.low_kline and not self.mid_kline and high_price >= self.mid_price:
-            kline["status"] = "mid"
+            processed_kline["status"] = "mid"
+            processed_kline["price"] = kline["high"]
             self.mid_kline = kline
             self.high_kline = None
             self.low_kline = None
             log_middle_kline(kline)
 
-        return kline
+        processed_kline["price"] = kline["close"]
+        return processed_kline
 
     def _analyzed_time_interval(self):
         return int(self.time_window / TIME_STEP)
@@ -166,15 +173,12 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
         self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
 
-        # create new empty file
-        file = open(self.output_file, "w")
-        file.close()
-
     def monitoring(self):
         chunk_analysis_start_time = self.analysis_start_time
         chunk_time_size = int(
             60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
         )  # klines size ~ 0.5 Gb
+        processed_klines = []
 
         while chunk_analysis_start_time < self.analysis_end_time:
             chunk_start_time = (
@@ -187,15 +191,14 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             chunk_klines = self.kline_manager.find_or_fetch_klines_in_range(
                 chunk_start_time, chunk_end_time
             )
-            processed_klines = self._analyze_klines(chunk_klines)
+            processed_klines.extend(self._analyze_klines(chunk_klines))
             chunk_analysis_start_time = chunk_end_time
 
-            with open(self.output_file, "a") as file:
-                json.dump(processed_klines, file)
+        with open(self.output_file, "w") as file:
+            json.dump(processed_klines, file)
 
-            # TODO: drawing the graph stops the loop
-            if self.graphic:
-                self.graphic.create_plot_for_historical_data(processed_klines)
+        if self.graphic:
+            self.graphic.create_plot_for_historical_data(processed_klines)
 
 
 def main():

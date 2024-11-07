@@ -112,7 +112,7 @@ class KlineManager:
         missing_times = self.find_missing_klines_time(start_time, end_time)
         if missing_times:
             logger.warning(
-                f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete. Fetching missing data..."
+                f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete."
             )
             missing_intervals = get_missing_intervals(missing_times)
 
@@ -122,7 +122,7 @@ class KlineManager:
 
             for interval_start, interval_end in missing_intervals:
                 logger.warning(
-                    f"Missing intervals: {(interval_start)} - {(interval_end)}"
+                    f"No klines found in the database on the interval: {convert_unix_to_str(interval_start)} - {convert_unix_to_str(interval_end)}. Fetching missing data..."
                 )
                 self.get_and_save_all_klines(interval_start, interval_end)
                 missing_klines += self.find_klines_in_range(
