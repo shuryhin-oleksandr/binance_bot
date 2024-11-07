@@ -17,6 +17,7 @@ from utils import (
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
+DEVIATION = 0.05
 
 
 def get_min_price(klines, start_index, last_index):
@@ -47,6 +48,10 @@ class PriceAnalyzer:
 
     def _is_lowest_kline(self, kline):
         return self.low_kline is None or self.low_kline["low"] > kline["low"]
+
+    def calculate_middle_price(self):
+        sideway_height = self.high_kline["high"] / self.low_kline["low"] - 1
+        return self.low_kline["low"] * (1 + (sideway_height / 2 - DEVIATION))
 
     def _analyze_kline(self, kline, min_price):
         high_price = kline["high"]
@@ -85,14 +90,12 @@ class PriceAnalyzer:
                 self.low_kline = kline
                 processed_kline["status"] = "low"
                 processed_kline["price"] = kline["low"]
-                self.mid_price = math.sqrt(
-                    self.high_kline["high"] * self.low_kline["low"]
-                )
+                self.mid_price = self.calculate_middle_price()
                 self.mid_kline = None
                 log_low_kline(kline)
                 return processed_kline
 
-        if self.low_kline and not self.mid_kline and high_price >= self.mid_price:
+        if (self.high_kline and self.low_kline) and not self.mid_kline and high_price >= self.mid_price:
             processed_kline["status"] = "mid"
             processed_kline["price"] = kline["high"]
             self.mid_kline = kline
