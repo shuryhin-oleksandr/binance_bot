@@ -20,7 +20,7 @@ def get_klines(start_time, end_time, symbol):
 
     if not klines:
         logger.error(
-            f"Data not found for the interval: {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)}"
+            f"No data found in binance on the interval: {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)}"
         )
 
     if "msg" in klines:
