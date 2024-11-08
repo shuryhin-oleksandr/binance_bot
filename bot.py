@@ -53,7 +53,7 @@ class PriceAnalyzer:
 
     def calculate_middle_price(self):
         sideway_height = self.high_kline["high"] / self.low_kline["low"] - 1
-        return self.low_kline["low"] * (1 + (sideway_height / 2 - DEVIATION))
+        return self.low_kline["low"] * (1 + sideway_height * (0.5 - DEVIATION))
 
     def _analyze_kline(self, kline, min_price):
         high_price = kline["high"]
