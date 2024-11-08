@@ -32,21 +32,6 @@
 - [ ] Draw grah: show all high, low points, now only last one
 - [ ] Handle 1 year for historical analysis (performance issue)
 
-### Bot command info
-`python bot.by`
-- `--growth_percent` (default: 30%)
-- `--drop_percent` (default: 10%)
-- `--time_window` (default: 24h)
-
-
-- `--real_time`
-- `--analysis_start_time` (default: binance listing)
-- `--analysis_end_time` (default: now)
-
-
-- `--plot_graphic` (dafault: no)
-- `--coin_symbol` (default: BTCUSDT)
-
 ### Running the bot 
 - Сommand to run bot for binance data analysis: 
 `python bot.py`
