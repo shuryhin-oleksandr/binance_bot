@@ -43,6 +43,7 @@ stream_handler.setFormatter(log_formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
+
 def parse_date(date_str):
     try:
         # Try parsing date and time
@@ -72,9 +73,14 @@ def log_middle_kline(kline):
 
 
 def log_high_kline(kline):
-    logger.info(
-        f"High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
-    )
+    if 'target_price_growth_percent' in kline is not None:
+        logger.info(
+            f"New impulse. High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
+        )
+    else:
+        logger.info(
+            f"High kline: {get_kline_time(kline)}, High price: {kline['high']}"
+        )
 
 
 def log_low_kline(kline):

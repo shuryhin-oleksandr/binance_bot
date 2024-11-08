@@ -60,18 +60,19 @@ class PriceAnalyzer:
         processed_kline = {} # create a new dict to save only the data needed for plotting
         processed_kline["status"] = ""  # all klines with status low, high, mid or none
         processed_kline["time"] = kline["closeTime"] # save the closeTime as x coordinate to show the kline
+        high_found = False
 
-        calculated_target_price_growth_percent = (
-            (high_price - min_price) / min_price
-        ) * 100
+        # if kline higher than the existing high kline
+        if self.high_kline and not self.low_kline and self._is_highest_kline(kline):
+            high_found = True
+        else:
+            calculated_target_price_growth_percent = ((high_price - min_price) / min_price) * 100
+            # if the new impulse is higher than the previous one
+            if calculated_target_price_growth_percent >= self.target_price_growth_percent and self._is_highest_kline(kline):
+                kline["target_price_growth_percent"] = calculated_target_price_growth_percent
+                high_found = True
 
-        if (
-            calculated_target_price_growth_percent >= self.target_price_growth_percent
-            and self._is_highest_kline(kline)
-        ):
-            kline["target_price_growth_percent"] = (
-                calculated_target_price_growth_percent
-            )
+        if high_found:                
             processed_kline["status"] = "high"
             processed_kline["price"] = kline["high"] # save the high price as y coordinate to show the kline
             self.high_kline = kline
