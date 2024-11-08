@@ -1,4 +1,4 @@
-import math
+import os
 import argparse
 import json
 import time
@@ -7,7 +7,8 @@ from graphic import Graphic
 from binance_api import get_klines
 from utils import (
     get_unix_timestamp,
-    convert_unix_to_str,
+    convert_unix_to_date_only_str,
+    get_next_file_number,
     log_high_kline,
     log_low_kline,
     log_middle_kline,
@@ -18,6 +19,7 @@ TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
 DEVIATION = 0.05
+JSON_DIRECTORY = "processed_klines"
 
 
 def get_min_price(klines, start_index, last_index):
@@ -31,7 +33,7 @@ class PriceAnalyzer:
         time_window,
         target_price_growth_percent,
         target_price_drop_percent,
-        plot_graphic=False,
+        draw_graph=False,
     ):
         self.kline_manager = kline_manager
         self.time_window = time_window * 60 * 60 * 1000  # Convert hours to milliseconds
@@ -41,7 +43,7 @@ class PriceAnalyzer:
         self.mid_kline = None
         self.low_kline = None
         self.mid_price = None
-        self.graphic = Graphic() if plot_graphic else None
+        self.graphic = Graphic() if draw_graph else None
 
     def _is_highest_kline(self, kline):
         return self.high_kline is None or (self.high_kline["high"] < kline["high"])
@@ -138,7 +140,7 @@ class RealTimePriceAnalyzer(PriceAnalyzer):
 
     def monitoring(self):
         while True:
-            current_time = int(datetime.now() * 1000)
+            current_time = int(datetime.now().timestamp() * 1000)
             start_time = (
                 current_time - self.time_window
             )  # get data starting from now - Yhr
@@ -159,7 +161,7 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         time_window,
         target_price_growth_percent,
         target_price_drop_percent,
-        plot_graphic,
+        draw_graph,
         analysis_start_time,
         analysis_end_time,
     ):
@@ -168,13 +170,18 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             time_window,
             target_price_growth_percent,
             target_price_drop_percent,
-            plot_graphic,
+            draw_graph,
         )
         self.analysis_start_time = analysis_start_time
         self.analysis_end_time = analysis_end_time
-        str_start_time = convert_unix_to_str(self.analysis_start_time).replace(" ", "_")
-        str_end_time = convert_unix_to_str(self.analysis_end_time).replace(" ", "_")
-        self.output_file = f"processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
+        str_start_time = convert_unix_to_date_only_str(self.analysis_start_time)
+        str_end_time = convert_unix_to_date_only_str(self.analysis_end_time)
+
+        if not os.path.exists(JSON_DIRECTORY):
+            os.makedirs(JSON_DIRECTORY)
+
+        file_number = get_next_file_number(directory=JSON_DIRECTORY, format=".json")
+        self.output_file = f"{JSON_DIRECTORY}/{file_number}_processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
 
     def monitoring(self):
         chunk_analysis_start_time = self.analysis_start_time
@@ -238,7 +245,7 @@ def main():
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
-    parser.add_argument("--plot_graphic", action="store_true", help="Plot graphic")
+    parser.add_argument("--draw_graph", action="store_true", help="Plot graphic")
 
     args = parser.parse_args()
 
@@ -252,7 +259,7 @@ def main():
             args.time_window,
             args.growth_percent,
             args.drop_percent,
-            args.plot_graphic,
+            args.draw_graph,
         )
     else:
         analysis_end_time = get_unix_timestamp(args.analysis_end_time)
@@ -270,7 +277,7 @@ def main():
             args.time_window,
             args.growth_percent,
             args.drop_percent,
-            args.plot_graphic,
+            args.draw_graph,
             analysis_start_time,
             analysis_end_time,
         )

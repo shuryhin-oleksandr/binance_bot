@@ -2,7 +2,7 @@ import time
 from pymongo import MongoClient
 from bot import TIME_STEP
 from binance_api import get_klines
-from utils import convert_unix_to_str, logger
+from utils import convert_unix_full_date_str, logger
 
 
 def get_missing_intervals(missing_times):
@@ -112,7 +112,7 @@ class KlineManager:
         missing_times = self.find_missing_klines_time(start_time, end_time)
         if missing_times:
             logger.warning(
-                f"Data for the range {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)} is incomplete."
+                f"Data for the range {convert_unix_full_date_str(start_time)} - {convert_unix_full_date_str(end_time)} is incomplete."
             )
             missing_intervals = get_missing_intervals(missing_times)
 
@@ -122,7 +122,7 @@ class KlineManager:
 
             for interval_start, interval_end in missing_intervals:
                 logger.warning(
-                    f"No klines found in the database on the interval: {convert_unix_to_str(interval_start)} - {convert_unix_to_str(interval_end)}. Fetching missing data..."
+                    f"No klines found in the database on the interval: {convert_unix_full_date_str(interval_start)} - {convert_unix_full_date_str(interval_end)}. Fetching missing data..."
                 )
                 self.get_and_save_all_klines(interval_start, interval_end)
                 missing_klines += self.find_klines_in_range(

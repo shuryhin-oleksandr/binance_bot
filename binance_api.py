@@ -1,5 +1,5 @@
 import requests
-from utils import convert_unix_to_str, logger
+from utils import convert_unix_full_date_str, logger
 
 BINANCE_API_URL = "https://api.binance.com/api/v3/klines"
 INTERVAL = "1m"
@@ -20,7 +20,7 @@ def get_klines(start_time, end_time, symbol):
 
     if not klines:
         logger.error(
-            f"No data found in binance on the interval: {convert_unix_to_str(start_time)} - {convert_unix_to_str(end_time)}"
+            f"No data found in binance on the interval: {convert_unix_full_date_str(start_time)} - {convert_unix_full_date_str(end_time)}"
         )
 
     if "msg" in klines:
