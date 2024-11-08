@@ -48,7 +48,7 @@
 
 
 ### Draw a graph 
-To draw a graph with the processed points saved in a file after the bot has finished: `python draw_graph.py "0001_processed_klines_BTCUSDT_2023-11-05_2024-11-05.json"`
+To draw a graph with the processed points saved in a file after the bot has finished: `python draw_graph.py "processed_klines/0001_processed_klines_BTCUSDT_2023-11-05_2024-11-05.json"`
 
 ### Running the script for data uploading
 To get data from binance and upload it to database at the specified time interval at the specified time interval specified in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (no default values):
