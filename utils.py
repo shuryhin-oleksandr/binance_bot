@@ -1,5 +1,23 @@
-from datetime import datetime
+import os
 import logging
+from datetime import datetime
+
+LOG_DIRECTORY = "logs"
+
+def get_next_file_number(directory=".", format=".json"):
+    files = [file for file in os.listdir(directory) if file.endswith(format)]
+
+    # Extract the number at the beginning of each file, if it exists
+    numbers = []
+    for file in files:
+        try:
+            number = int(file.split('_')[0])
+            numbers.append(number)
+        except ValueError:
+            pass
+
+    next_number = max(numbers, default=0) + 1
+    return f"{next_number:04d}"  # Format as four-digit number
 
 
 # Configure the logging level and format
@@ -10,7 +28,11 @@ log_formatter = logging.Formatter(
 )
 
 # File Handler
-file_handler = logging.FileHandler("kline_log.log", "w")
+if not os.path.exists(LOG_DIRECTORY):
+    os.makedirs(LOG_DIRECTORY)
+
+file_number = get_next_file_number(directory=LOG_DIRECTORY, format=".log")
+file_handler = logging.FileHandler(f"{LOG_DIRECTORY}/{file_number}_processed_klines.log", "w")
 file_handler.setFormatter(log_formatter)
 
 # Stream Handler
@@ -35,12 +57,15 @@ def get_unix_timestamp(date):
     return int(date.timestamp() * 1000)
 
 
-def convert_unix_to_str(unix_timestamp):
+def convert_unix_full_date_str(unix_timestamp):
     return datetime.fromtimestamp(unix_timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
+
+def convert_unix_to_date_only_str(unix_timestamp):
+    return datetime.fromtimestamp(unix_timestamp / 1000).strftime("%Y-%m-%d")
 
 
 def get_kline_time(kline):
-    return f"Start time: {convert_unix_to_str(kline['startTime'])}, Closing Time: {convert_unix_to_str(kline['closeTime'])}"
+    return f"Start time: {convert_unix_full_date_str(kline['startTime'])}, Closing Time: {convert_unix_full_date_str(kline['closeTime'])}"
 
 
 def log_middle_kline(kline):
@@ -48,9 +73,14 @@ def log_middle_kline(kline):
 
 
 def log_high_kline(kline):
-    logger.info(
-        f"High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
-    )
+    if 'target_price_growth_percent' in kline is not None:
+        logger.info(
+            f"New impulse. High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
+        )
+    else:
+        logger.info(
+            f"High kline: {get_kline_time(kline)}, High price: {kline['high']}"
+        )
 
 
 def log_low_kline(kline):

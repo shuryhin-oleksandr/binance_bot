@@ -48,18 +48,22 @@
 - `--coin_symbol` (default: BTCUSDT)
 
 ### Running the bot 
-1. For historical data: 
-    `python bot.py --growth_percent=10 --drop_percent=5 --time_window=16 --analysis_start_time="2023-11-5 16:00:00" --analysis_end_time="2024-11-5 12:00:00"`
-    or with default values for growth_percent=30%, drop_percent=10% and time_window=24h:
-    `python bot.py --analysis_start_time="2024-10-15" --analysis_end_time="2024-10-15"`
-2. For real-time: `python bot.py --growth_percent=10 --drop_percent=5 --time_window=16 --real_time` or `python bot.py --real_time`
-3. To run with graphic add `--plot_graphic` to the end of the command:
-    Example: `python bot.py --analysis_start_time="2024-10-15 16:00:00" --analysis_end_time="2024-10-15 20:00:00" --plot_graphic` 
-4. To change coin (bitcoin by default) add `--coin_symbol` to the start of the command.
-    Example with Ethereum: `python bot.py --coin_symbol=ETHUSDT --analysis_start_time="2024-10-15" --analysis_end_time="2024-10-15"`
-5. To plot a graph with processed points: `python plot_from_json.py "processed_klines_BTCUSDT_2023-11-05_16:00:00_2024-11-05_12:00:00.json"`
-6. To analyse data from the moment, when coin started existing in Binance from now run bot without time interval: 
-    Example: `python bot.py --plot_graphic` 
+- Сommand to run bot for binance data analysis: 
+`python bot.py`
+- **Parameters**: 
+- --growth_percent : int type, minimum percentage increase in price for detecting price growth (default is 30%). Example: `--growth_percent=10`
+- --drop_percent : int vaulue, maximum percentage drop from the high price for triggering action (default is 10%). Example: `--drop_percent=5`
+- --time_window : int type, the time(hours) for which X% growth will be determined (default is 24 hours). Example: `--time_window=16`
+- --analysis_start_time : str type. Start time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is datatime when coin started existing in binance). Example: `--analysis_start_time="2019-10-15"` `--analysis_start_time="2019-10-15 14:00:00`
+- --analysis_end_time : str type. End time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is now).
+- --coin_symbol: sring type. The cryptocurrency symbol to analyze (default is BTCUSDT).Example with Ethereum: `--coin_symbol=ETHUSDT`
+- --real_time: Flag (no value required). Real-time data analysis. Start from now, analysis_start_time and analysis_end_time will be ignored.
+- --draw_graph: Flag (no value required). Draw a graph
+
+
+### Draw a graph 
+To draw a graph with the processed points saved in a file after the bot has finished: `python draw_graph.py "processed_klines/0001_processed_klines_BTCUSDT_2023-11-05_2024-11-05.json"`
 
 ### Running the script for data uploading
+To get data from binance and upload it to database at the specified time interval at the specified time interval specified in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (no default values):
 `python fetch_klines_script.py "2017-06-15" "2019-10-15"` or `python fetch_klines_script.py "2017-06-15 16:00:00" "2019-10-15 16:00:00"`

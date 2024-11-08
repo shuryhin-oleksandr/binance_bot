@@ -3,9 +3,10 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
 from datetime import datetime
-from utils import convert_unix_to_str
+from utils import convert_unix_full_date_str
 
 matplotlib.use("TkAgg")
+
 
 class Graphic:
     def __init__(self):
@@ -13,7 +14,9 @@ class Graphic:
             figsize=(12, 6)
         )  # axes encapsulates all the elements of an individual (sub-)plot in a figure
         self._initialize_plot()
-        (self.line,) = self.ax.plot([], [], "darkgrey", label="All Prices", markersize=1)
+        (self.line,) = self.ax.plot(
+            [], [], "darkgrey", label="All Prices", markersize=1
+        )
         self.current_page = 0
         self.points_per_page = 1440 * 100  # ~ 100days
         self._create_pagination_controls()
@@ -29,22 +32,26 @@ class Graphic:
     def _create_pagination_controls(self):
         # Text box for setting points per page
         ax_textbox = plt.axes([0.1, 0.01, 0.1, 0.05])
-        self.textbox = TextBox(ax_textbox, 'Points per page:', initial=str(self.points_per_page))
+        self.textbox = TextBox(
+            ax_textbox, "Points per page:", initial=str(self.points_per_page)
+        )
         self.textbox.on_submit(self._set_points_per_page)
 
         # Previous button
         ax_prev = plt.axes([0.3, 0.01, 0.1, 0.05])
-        self.prev_button = Button(ax_prev, 'Previous')
+        self.prev_button = Button(ax_prev, "Previous")
         self.prev_button.on_clicked(self._prev_page)
 
         # Next button
         ax_next = plt.axes([0.45, 0.01, 0.1, 0.05])
-        self.next_button = Button(ax_next, 'Next')
+        self.next_button = Button(ax_next, "Next")
         self.next_button.on_clicked(self._next_page)
 
     def _set_points_per_page(self, text):
         try:
-            self.points_per_page = max(1, int(text))  # Ensures at least 1 point per page
+            self.points_per_page = max(
+                1, int(text)
+            )  # Ensures at least 1 point per page
             self.current_page = 0
             self.paginate_plot()
         except ValueError:
@@ -67,7 +74,7 @@ class Graphic:
 
         for point in all_points:
             point["time"] = datetime.strptime(
-                convert_unix_to_str(point["time"]), "%Y-%m-%d %H:%M:%S"
+                convert_unix_full_date_str(point["time"]), "%Y-%m-%d %H:%M:%S"
             )
             # Add the time and price to respective x and y data lists for plotting
             self.x_data.append(point["time"])
@@ -90,12 +97,11 @@ class Graphic:
 
         # Add new data
         new_point["time"] = datetime.strptime(
-            convert_unix_to_str(new_point["time"]), "%Y-%m-%d %H:%M:%S"
+            convert_unix_full_date_str(new_point["time"]), "%Y-%m-%d %H:%M:%S"
         )
         x_data = list(x_data) + [new_point["time"]]
         y_data = list(y_data) + [new_point["price"]]
         self.line.set_data(x_data, y_data)
-
         # Keep axis constraints for automatic scaling
         self.ax.relim()
         self.ax.autoscale_view()
@@ -143,12 +149,16 @@ class Graphic:
                 low_points.append(kline)
                 # Last high point before low must be with label
                 if high_points:
-                    self._plot_last_point(high_points[-1], color="green", label="High:", markersize=4)
+                    self._plot_last_point(
+                        high_points[-1], color="green", label="High:", markersize=4
+                    )
             elif kline["status"] == "mid":
                 mid_points.append(kline)
                 # Last low point before mid point must be with label
                 if low_points:
-                    self._plot_last_point(low_points[-1], color="red", label="Low:", markersize=4)
+                    self._plot_last_point(
+                        low_points[-1], color="red", label="Low:", markersize=4
+                    )
 
         self.plot_all_points(high_points, color="green")
         self.plot_all_points(low_points, color="red")
@@ -168,7 +178,13 @@ class Graphic:
             self._plot_point(point, color=color)
 
     def _plot_point(self, point, color, markersize=2):
-        self.ax.plot(point["time"], point["price"], marker="o", color=color, markersize=markersize)
+        self.ax.plot(
+            point["time"],
+            point["price"],
+            marker="o",
+            color=color,
+            markersize=markersize,
+        )
         return point["time"], point["price"]
 
     def _plot_last_point(self, point, color, label, markersize=2):
