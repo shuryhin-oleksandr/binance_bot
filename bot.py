@@ -210,43 +210,43 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
 
         if self.graphic:
             self.graphic.create_plot_for_historical_data(processed_klines)
-
+        
 
 def main():
     parser = argparse.ArgumentParser(
         description="Check if a coin price has increased by a certain percentage within a time period."
     )
     parser.add_argument(
-        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
+        "--coin-symbol", type=str, default="BTCUSDT", help="Coin symbol"
     )
     parser.add_argument(
-        "--growth_percent",
+        "--growth-percent",
         type=float,
         default=30,
         help="Percentage rised threshold (X%)",
     )
     parser.add_argument(
-        "--drop_percent", type=float, default=10, help="Percentage drop threshold (Y%)"
+        "--drop-percent", type=float, default=10, help="Percentage drop threshold (Y%)"
     )
     parser.add_argument(
-        "--time_window",
+        "--time-window",
         type=int,
         default=24,
         help="Time window in hours to check the price increase (Yhr)",
     )
     parser.add_argument(
-        "--analysis_start_time",
+        "--analysis-start-time",
         type=parse_date,
         help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "--analysis_end_time",
+        "--analysis-end-time",
         type=parse_date,
         default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
-    parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
-    parser.add_argument("--draw_graph", action="store_true", help="Plot graphic")
+    parser.add_argument("--real-time", action="store_true", help="Real time monitoring")
+    parser.add_argument("--draw-graph", action="store_true", help="Plot graphic")
 
     args = parser.parse_args()
 

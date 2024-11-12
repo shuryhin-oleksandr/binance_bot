@@ -32,18 +32,19 @@
 - [ ] Draw grah: show all high, low points, now only last one
 - [ ] Handle 1 year for historical analysis (performance issue)
 
+
 ### Running the bot 
 - Сommand to run bot for binance data analysis: 
 `python bot.py`
 - **Parameters**: 
-- --growth_percent : int type, minimum percentage increase in price for detecting price growth (default is 30%). Example: `--growth_percent=10`
-- --drop_percent : int vaulue, maximum percentage drop from the high price for triggering action (default is 10%). Example: `--drop_percent=5`
-- --time_window : int type, the time(hours) for which X% growth will be determined (default is 24 hours). Example: `--time_window=16`
-- --analysis_start_time : str type. Start time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is datatime when coin started existing in binance). Example: `--analysis_start_time="2019-10-15"` `--analysis_start_time="2019-10-15 14:00:00`
-- --analysis_end_time : str type. End time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is now).
-- --coin_symbol: sring type. The cryptocurrency symbol to analyze (default is BTCUSDT).Example with Ethereum: `--coin_symbol=ETHUSDT`
-- --real_time: Flag (no value required). Real-time data analysis. Start from now, analysis_start_time and analysis_end_time will be ignored.
-- --draw_graph: Flag (no value required). Draw a graph
+- `--growth-percent` : int type, minimum percentage increase in price for detecting price growth (default is 30%). Example: `--growth-percent=10`
+- `--drop-percent` : int vaulue, maximum percentage drop from the high price for triggering action (default is 10%). Example: `--drop-percent=5`
+- `--time-window` : int type, the time(hours) for which X% growth will be determined (default is 24 hours). Example: `--time-window=16`
+- `--analysis-start-time`: str type. Start time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is datatime when coin started existing in binance). Example: `--analysis-start-time` `--analysis-start-time="2019-10-15 14:00:00`
+- `--analysis-end-time`: str type. End time for the analysis in the format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (default is now).
+- `--coin-symbol`: sring type. The cryptocurrency symbol to analyze (default is BTCUSDT).Example with Ethereum: `--coin-symbol=ETHUSDT`
+- `--real-time`: Flag (no value required). Real-time data analysis. Start from now, analysis_start_time and analysis_end_time will be ignored.
+- `--draw-graph`: Flag (no value required). Draw a graph
 
 
 ### Draw a graph 
