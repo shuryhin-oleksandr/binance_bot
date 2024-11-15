@@ -2,7 +2,7 @@ import json
 import argparse
 from graphic import Graphic
 
-def plot_klines_from_json(json_file):
+def create_graph(json_file):
     graphic = Graphic()
     # Load data from the JSON file
     with open(json_file, "r") as file:
@@ -16,4 +16,4 @@ if __name__ == "__main__":
     parser.add_argument("json_file", type=str, help="Path to JSON file with kline data")
     args = parser.parse_args()
     
-    plot_klines_from_json(args.json_file)
+    create_graph(args.json_file)
