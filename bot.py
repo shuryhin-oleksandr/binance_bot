@@ -165,28 +165,28 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         file_number = get_next_file_number(directory=JSON_DIRECTORY, format=".json")
         self.output_file = f"{JSON_DIRECTORY}/{file_number}_processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
 
-    def generate_processed_klines(self, klines):
+    def analyze(self, klines):
         """
         - A generator to yield processed klines one at a time.
         - The start of the analysis = to the size of the snapshot
         """
         for current_kline_index in range(self.snapshot_klines_count, len(klines)):
-            processed_kline = self._analyze_snapshot(klines, current_kline_index)
-            yield processed_kline
+            analyzed_kline = self._analyze_snapshot(klines, current_kline_index)
+            yield analyzed_kline
 
-    def analyze(self):
+    def run(self):
         """
         Fetch and analyze all klines within the specified analysis time range in one step.
         """
-        all_analysed_klines = self.kline_manager.find_or_fetch_klines_in_range(
+        all_klines = self.kline_manager.find_or_fetch_klines_in_range(
             self.analysis_start_time - self.time_window,
             self.analysis_end_time
         )
 
-        processed_klines = list(self.generate_processed_klines(all_analysed_klines))
+        analyzed_klines = list(self.analyze(all_klines))
 
         with open(self.output_file, "w") as file:
-            json.dump(processed_klines, file)
+            json.dump(analyzed_klines, file)
 
 
 def main():
@@ -260,7 +260,7 @@ def main():
             analysis_end_time,
         )
 
-        analyzer.analyze()
+        analyzer.run()
         if args.draw_graph:
             create_graph(analyzer.output_file)
 
