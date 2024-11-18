@@ -178,13 +178,12 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         """
         Fetch and analyze all klines within the specified analysis time range in one step.
         """
-        # Fetch all klines for the analysis period
-        klines = self.kline_manager.find_or_fetch_klines_in_range(
-            self.analysis_start_time - self.time_window,  # Start time with buffer for analysis
+        all_analysed_klines = self.kline_manager.find_or_fetch_klines_in_range(
+            self.analysis_start_time - self.time_window,
             self.analysis_end_time
         )
 
-        processed_klines = list(self.generate_processed_klines(klines))
+        processed_klines = list(self.generate_processed_klines(all_analysed_klines))
 
         with open(self.output_file, "w") as file:
             json.dump(processed_klines, file)
