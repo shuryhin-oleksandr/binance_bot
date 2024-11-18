@@ -22,11 +22,11 @@ DEVIATION = 0.05
 JSON_DIRECTORY = "processed_klines"
 
 
-def get_min_price(klines, start_index, last_index): # optimization of the search for the minimum value
+def get_min_price(klines, start_index, last_index):  # optimization of the search for the minimum value
     min_price = klines[start_index]["low"]
-    for j in range(start_index + 1, last_index):
-        if klines[j]["low"] < min_price:
-            min_price = klines[j]["low"]
+    for i in range(start_index + 1, last_index):
+        if klines[i]["low"] < min_price:
+            min_price = klines[i]["low"]
     return min_price
 
 
@@ -60,9 +60,10 @@ class PriceAnalyzer:
 
     def _analyze_kline(self, kline, min_price):
         high_price = kline["high"]
-        processed_kline = {} # create a new dict to save only the data needed for plotting
-        processed_kline["status"] = ""  # all klines with status low, high, mid or none
-        processed_kline["time"] = kline["closeTime"] # save the closeTime as x coordinate to show the kline
+        processed_kline = {  # save only data needed for plotting
+            "status": "",  # one of: low, high, mid or none
+            "time": kline["closeTime"],  # save the closeTime as x coordinate to show the kline
+        }
         high_found = False
 
         # if kline higher than the existing high kline
@@ -75,7 +76,7 @@ class PriceAnalyzer:
                 kline["target_price_growth_percent"] = calculated_target_price_growth_percent
                 high_found = True
 
-        if high_found:                
+        if high_found:
             processed_kline["status"] = "high"
             processed_kline["price"] = kline["high"] # save the high price as y coordinate to show the kline
             self.high_kline = kline
@@ -170,9 +171,10 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         - The start of the analysis = to the size of the snapshot
         """
         for current_kline_index in range(self.snapshot_klines_count, len(klines)):
-            yield self._analyze_snapshot(klines, current_kline_index)
+            processed_kline = self._analyze_snapshot(klines, current_kline_index)
+            yield processed_kline
 
-    def analyzer(self):
+    def analyze(self):
         """
         Fetch and analyze all klines within the specified analysis time range in one step.
         """
@@ -259,7 +261,7 @@ def main():
             analysis_end_time,
         )
 
-        analyzer.analyzer()
+        analyzer.analyze()
         if args.draw_graph:
             create_graph(analyzer.output_file)
 
