@@ -3,8 +3,8 @@ import argparse
 import json
 import time
 from datetime import datetime
-from graphic import Graphic
 from binance_api import get_klines
+from draw_graph import create_graph
 from utils import (
     get_unix_timestamp,
     convert_unix_to_date_only_str,
@@ -22,8 +22,12 @@ DEVIATION = 0.05
 JSON_DIRECTORY = "processed_klines"
 
 
-def get_min_price(klines, start_index, last_index):
-    return min(klines[j]["low"] for j in range(start_index, last_index))
+def get_min_price(klines, start_index, last_index): # optimization of the search for the minimum value
+    min_price = klines[start_index]["low"]
+    for j in range(start_index + 1, last_index):
+        if klines[j]["low"] < min_price:
+            min_price = klines[j]["low"]
+    return min_price
 
 
 class PriceAnalyzer:
@@ -33,7 +37,6 @@ class PriceAnalyzer:
         time_window,
         target_price_growth_percent,
         target_price_drop_percent,
-        draw_graph=False,
     ):
         self.kline_manager = kline_manager
         self.time_window = time_window * 60 * 60 * 1000  # Convert hours to milliseconds
@@ -43,7 +46,7 @@ class PriceAnalyzer:
         self.mid_kline = None
         self.low_kline = None
         self.mid_price = None
-        self.graphic = Graphic() if draw_graph else None
+        self.size_of_snapshot = int(self.time_window / TIME_STEP)
 
     def _is_highest_kline(self, kline):
         return self.high_kline is None or (self.high_kline["high"] < kline["high"])
@@ -105,36 +108,15 @@ class PriceAnalyzer:
             self.high_kline = None
             self.low_kline = None
             log_middle_kline(kline)
+            return processed_kline
 
         processed_kline["price"] = kline["close"]
         return processed_kline
 
-    def _analyzed_time_interval(self):
-        return int(self.time_window / TIME_STEP)
-
-    def _analyze_klines(self, klines):
-        """
-        Analyze a list of kline data within a specified time interval.
-        - For each kline, it calculates the minimum price within the time window and
-          applies `_analyze_kline` to perform specific processing.
-        """
-        processed_klines = []
-        analysis_start_index = (
-            self._analyzed_time_interval()
-        )  # the time index of the start of the analysis (the lower limit of the interval)
-
-        for index in range(analysis_start_index, len(klines)):
-            current_kline = klines[index]
-            min_search_start = (
-                index - analysis_start_index
-            )  # find the start index for searching for minimum values within the time window Y hours
-            min_price = get_min_price(klines, min_search_start, index)
-            processed_klines.append(self._analyze_kline(current_kline, min_price))
-
-        return processed_klines
-
-    def monitoring(self):
-        raise NotImplementedError("Subclasses should implement this method")
+    def _analyze_snapshot(self, klines, snapshot_end):
+        snapshot_start = snapshot_end - self.size_of_snapshot
+        min_price = get_min_price(klines, snapshot_start, snapshot_end)
+        return self._analyze_kline(klines[snapshot_end], min_price)
 
 
 class RealTimePriceAnalyzer(PriceAnalyzer):
@@ -148,7 +130,7 @@ class RealTimePriceAnalyzer(PriceAnalyzer):
             klines = self.kline_manager.find_or_fetch_klines_in_range(
                 start_time, current_time
             )
-            processed_klines = self._analyze_klines(klines)
+            processed_klines = self._analyze_snapshot(klines)
             if self.graphic:
                 self.graphic.update_plot_real_time(processed_klines[-1])
 
@@ -162,7 +144,6 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         time_window,
         target_price_growth_percent,
         target_price_drop_percent,
-        draw_graph,
         analysis_start_time,
         analysis_end_time,
     ):
@@ -171,7 +152,6 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
             time_window,
             target_price_growth_percent,
             target_price_drop_percent,
-            draw_graph,
         )
         self.analysis_start_time = analysis_start_time
         self.analysis_end_time = analysis_end_time
@@ -184,32 +164,29 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         file_number = get_next_file_number(directory=JSON_DIRECTORY, format=".json")
         self.output_file = f"{JSON_DIRECTORY}/{file_number}_processed_klines_{kline_manager.symbol}_{str_start_time}_{str_end_time}.json"
 
-    def monitoring(self):
-        chunk_analysis_start_time = self.analysis_start_time
-        chunk_time_size = int(
-            60 * 60 * 24 * 43 * 365 * TIME_STEP / 1000
-        )  # klines size ~ 0.5 Gb
-        processed_klines = []
+    def generate_processed_klines(self, klines):
+        """
+        - A generator to yield processed klines one at a time.
+        - The start of the analysis = to the size of the snapshot
+        """
+        for index in range(self.size_of_snapshot, len(klines)):
+            yield self._analyze_snapshot(klines, index)
 
-        while chunk_analysis_start_time < self.analysis_end_time:
-            chunk_start_time = (
-                chunk_analysis_start_time - self.time_window
-            )  # get data starting from analysis_start_time- Yhr
-            chunk_end_time = min(
-                chunk_analysis_start_time + chunk_time_size, self.analysis_end_time
-            )
+    def analyzer(self):
+        """
+        Fetch and analyze all klines within the specified analysis time range in one step.
+        """
+        # Fetch all klines for the analysis period
+        klines = self.kline_manager.find_or_fetch_klines_in_range(
+            self.analysis_start_time - self.time_window,  # Start time with buffer for analysis
+            self.analysis_end_time                        # End time of analysis
+        )
 
-            chunk_klines = self.kline_manager.find_or_fetch_klines_in_range(
-                chunk_start_time, chunk_end_time
-            )
-            processed_klines.extend(self._analyze_klines(chunk_klines))
-            chunk_analysis_start_time = chunk_end_time
+        # Process klines using a generator
+        processed_klines = list(self.generate_processed_klines(klines))
 
         with open(self.output_file, "w") as file:
             json.dump(processed_klines, file)
-
-        if self.graphic:
-            self.graphic.create_plot_for_historical_data(processed_klines)
 
 
 def main():
@@ -217,36 +194,36 @@ def main():
         description="Check if a coin price has increased by a certain percentage within a time period."
     )
     parser.add_argument(
-        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
+        "--coin-symbol", type=str, default="BTCUSDT", help="Coin symbol"
     )
     parser.add_argument(
-        "--growth_percent",
+        "--growth-percent",
         type=float,
         default=30,
         help="Percentage rised threshold (X%)",
     )
     parser.add_argument(
-        "--drop_percent", type=float, default=10, help="Percentage drop threshold (Y%)"
+        "--drop-percent", type=float, default=10, help="Percentage drop threshold (Y%)"
     )
     parser.add_argument(
-        "--time_window",
+        "--time-window",
         type=int,
         default=24,
         help="Time window in hours to check the price increase (Yhr)",
     )
     parser.add_argument(
-        "--analysis_start_time",
+        "--analysis-start-time",
         type=parse_date,
         help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "--analysis_end_time",
+        "--analysis-end-time",
         type=parse_date,
         default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
-    parser.add_argument("--real_time", action="store_true", help="Real time monitoring")
-    parser.add_argument("--draw_graph", action="store_true", help="Plot graphic")
+    parser.add_argument("--real-time", action="store_true", help="Real time monitoring")
+    parser.add_argument("--draw-graph", action="store_true", help="Draw graph")
 
     args = parser.parse_args()
 
@@ -262,6 +239,7 @@ def main():
             args.drop_percent,
             args.draw_graph,
         )
+        monitoring.monitoring()
     else:
         analysis_end_time = get_unix_timestamp(args.analysis_end_time)
         if not args.analysis_start_time:
@@ -273,17 +251,18 @@ def main():
         else:
             analysis_start_time = get_unix_timestamp(args.analysis_start_time)
 
-        monitoring = HistoricalPriceAnalyzer(
+        analyzer = HistoricalPriceAnalyzer(
             kline_manager,
             args.time_window,
             args.growth_percent,
             args.drop_percent,
-            args.draw_graph,
             analysis_start_time,
             analysis_end_time,
         )
 
-    monitoring.monitoring()
+        analyzer.analyzer()
+        if args.draw_graph:
+            create_graph(analyzer.output_file)
 
 
 if __name__ == "__main__":
