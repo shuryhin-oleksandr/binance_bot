@@ -10,15 +10,15 @@ def main():
         description="Fetch and save klines data from Binance."
     )
     parser.add_argument(
-        "--coin_symbol", type=str, default="BTCUSDT", help="Coin symbol"
+        "--coin", type=str, default="BTCUSDT", help="Coin symbol"
     )
     parser.add_argument(
-        "start_time",
+        "start-time",
         type=parse_date,
         help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
-        "end_time",
+        "end-time",
         type=parse_date,
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )

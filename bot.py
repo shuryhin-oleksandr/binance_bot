@@ -46,7 +46,7 @@ class PriceAnalyzer:
         self.mid_kline = None
         self.low_kline = None
         self.mid_price = None
-        self.size_of_snapshot = int(self.time_window / TIME_STEP)
+        self.snapshot_klines_count = int(self.time_window / TIME_STEP)
 
     def _is_highest_kline(self, kline):
         return self.high_kline is None or (self.high_kline["high"] < kline["high"])
@@ -114,7 +114,7 @@ class PriceAnalyzer:
         return processed_kline
 
     def _analyze_snapshot(self, klines, snapshot_end):
-        snapshot_start = snapshot_end - self.size_of_snapshot
+        snapshot_start = snapshot_end - self.snapshot_klines_count
         min_price = get_min_price(klines, snapshot_start, snapshot_end)
         return self._analyze_kline(klines[snapshot_end], min_price)
 
@@ -169,8 +169,8 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         - A generator to yield processed klines one at a time.
         - The start of the analysis = to the size of the snapshot
         """
-        for index in range(self.size_of_snapshot, len(klines)):
-            yield self._analyze_snapshot(klines, index)
+        for current_kline_index in range(self.snapshot_klines_count, len(klines)):
+            yield self._analyze_snapshot(klines, current_kline_index)
 
     def analyzer(self):
         """
@@ -179,10 +179,9 @@ class HistoricalPriceAnalyzer(PriceAnalyzer):
         # Fetch all klines for the analysis period
         klines = self.kline_manager.find_or_fetch_klines_in_range(
             self.analysis_start_time - self.time_window,  # Start time with buffer for analysis
-            self.analysis_end_time                        # End time of analysis
+            self.analysis_end_time
         )
 
-        # Process klines using a generator
         processed_klines = list(self.generate_processed_klines(klines))
 
         with open(self.output_file, "w") as file:
@@ -200,10 +199,10 @@ def main():
         "--growth-percent",
         type=float,
         default=30,
-        help="Percentage rised threshold (X%)",
+        help="Percentage rised threshold (X%%)",
     )
     parser.add_argument(
-        "--drop-percent", type=float, default=10, help="Percentage drop threshold (Y%)"
+        "--drop-percent", type=float, default=10, help="Percentage drop threshold (Y%%)"
     )
     parser.add_argument(
         "--time-window",
