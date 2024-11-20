@@ -7,8 +7,11 @@ def create_graph(json_file):
     # Load data from the JSON file
     with open(json_file, "r") as file:
         # TODO: read a certain amount of data 
-        all_points = json.load(file)
-        graphic.create_plot_for_historical_data(all_points)
+        data = json.load(file)
+        klines = data.get("klines", [])
+        trades = data.get("trades", [])
+
+        graphic.create_plot_for_historical_data(klines)
 
 
 if __name__ == "__main__":

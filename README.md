@@ -23,8 +23,7 @@
 - **Classes**:
   - `KlineManager`: Manages retrieval and filtering of kline data from MongoDB.
   - `PriceMonitoring`: Calculates price movement based on high, low, and midpoint calculations.
-  - `RealTimePriceAnalyzer`: Handles real-time price analysis by continually fetching new klines and analyzing them.
-  - `HistoricalPriceAnalyzer`: Analyzes historical data for a set time range.
+  - `Dispatcher`: class to manage analysis and trader for real time and historical data 
   - `Graphic`: Displays the price data and highlights significant high, low, and midpoint values.
   - `fetch_klines_script`: The main script that fetches klines data between specified times, using `KlineManager` to save them to MongoDB.
 
