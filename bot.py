@@ -17,6 +17,7 @@ from utils import (
 )
 import json
 
+
 def serialize_trade(trade):
     if isinstance(trade, Trade):
         return trade.__dict__  # Повертає атрибути об'єкта у вигляді словника
@@ -30,7 +31,9 @@ DEVIATION = 0.05
 JSON_DIRECTORY = "analyzed_data"
 
 
-def get_min_price(klines, start_index, last_index): # optimization of the search for the minimum value
+def get_min_price(
+    klines, start_index, last_index
+):  # optimization of the search for the minimum value
     min_price = klines[start_index]["low"]
     for j in range(start_index + 1, last_index):
         if klines[j]["low"] < min_price:
@@ -63,7 +66,7 @@ class PriceAnalyzer:
     def calculate_middle_price(self):
         sideway_height = self.high_kline["high"] / self.low_kline["low"] - 1
         return self.low_kline["low"] * (1 + sideway_height * (0.5 - DEVIATION))
-    
+
     def reset_points(self):
         self.high_kline = None
         self.low_kline = None
@@ -72,7 +75,9 @@ class PriceAnalyzer:
         high_price = kline["high"]
         processed_kline = {  # save only data needed for plotting
             "status": "",  # one of: low, high, mid or none
-            "time": kline["closeTime"],  # save the closeTime as x coordinate to show the kline
+            "time": kline[
+                "closeTime"
+            ],  # save the closeTime as x coordinate to show the kline
         }
         high_found = False
 
@@ -80,15 +85,25 @@ class PriceAnalyzer:
         if self.high_kline and not self.low_kline and self._is_highest_kline(kline):
             high_found = True
         else:
-            calculated_target_price_growth_percent = ((high_price - min_price) / min_price) * 100
+            calculated_target_price_growth_percent = (
+                (high_price - min_price) / min_price
+            ) * 100
             # if the new impulse is higher than the previous one
-            if calculated_target_price_growth_percent >= self.target_price_growth_percent and self._is_highest_kline(kline):
-                kline["target_price_growth_percent"] = calculated_target_price_growth_percent
+            if (
+                calculated_target_price_growth_percent
+                >= self.target_price_growth_percent
+                and self._is_highest_kline(kline)
+            ):
+                kline["target_price_growth_percent"] = (
+                    calculated_target_price_growth_percent
+                )
                 high_found = True
 
         if high_found:
             processed_kline["status"] = "high"
-            processed_kline["price"] = kline["high"] # save the high price as y coordinate to show the kline
+            processed_kline["price"] = kline[
+                "high"
+            ]  # save the high price as y coordinate to show the kline
             self.high_kline = kline
             log_high_kline(kline)
             return processed_kline
@@ -112,7 +127,11 @@ class PriceAnalyzer:
                 log_low_kline(kline)
                 return processed_kline
 
-        if (self.high_kline and self.low_kline) and not self.mid_kline and high_price >= self.mid_price:
+        if (
+            (self.high_kline and self.low_kline)
+            and not self.mid_kline
+            and high_price >= self.mid_price
+        ):
             processed_kline["status"] = "mid"
             processed_kline["price"] = kline["high"]
             self.mid_kline = kline
@@ -128,7 +147,7 @@ class PriceAnalyzer:
         return self._analyze_kline(klines[snapshot_end], min_price)
 
 
-class Dispatcher():
+class Dispatcher:
     def __init__(
         self,
         analyzer,
@@ -138,7 +157,7 @@ class Dispatcher():
         self.analyzer = analyzer
         self.trader = trader
         self.kline_manager = kline_manager
-    
+
     def set_time_interval(self, analysis_start_time, analysis_end_time):
         self.analysis_start_time = analysis_start_time
         self.analysis_end_time = analysis_end_time
@@ -146,8 +165,9 @@ class Dispatcher():
     def run_for_historical_data(self):
         # Fetch all klines for the analysis period
         klines = self.kline_manager.find_or_fetch_klines_in_range(
-            self.analysis_start_time - self.analyzer.time_window,  # Start time with buffer for analysis
-            self.analysis_end_time                        # End time of analysis
+            self.analysis_start_time
+            - self.analyzer.time_window,  # Start time with buffer for analysis
+            self.analysis_end_time,  # End time of analysis
         )
         analyzed_klines = []
         trades = []
@@ -160,17 +180,28 @@ class Dispatcher():
             if self.trader.has_uncompleted_trade():
                 self.trader.evaluate_trades(current_kline)
                 continue
-    
+
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
-                trades.append(self.trader.place_short_trade(self.analyzer.high_kline["high"], self.analyzer.low_kline["low"], self.analyzer.mid_kline["high"]))
-                trades.append(self.trader.place_long_trade(self.analyzer.high_kline["high"], self.analyzer.low_kline["low"], self.analyzer.mid_kline["high"]))
-                
+                trades.append(
+                    self.trader.place_short_trade(
+                        self.analyzer.high_kline["high"],
+                        self.analyzer.low_kline["low"],
+                        self.analyzer.mid_kline["high"],
+                    )
+                )
+                trades.append(
+                    self.trader.place_long_trade(
+                        self.analyzer.high_kline["high"],
+                        self.analyzer.low_kline["low"],
+                        self.analyzer.mid_kline["high"],
+                    )
+                )
+
                 self.analyzer.reset_points()
 
             analyzed_klines.append(analyzed_kline)
         return analyzed_klines, trades
-
 
     def real_time_monitoring(self):
         while True:
@@ -189,9 +220,17 @@ class Dispatcher():
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
-                self.trader.place_short_trade(self.analyzer.high_kline["high"], self.analyzer.low_kline["low"], self.analyzer.mid_kline["high"])
-                self.trader.place_long_trade(self.analyzer.high_kline["high"], self.analyzer.low_kline["low"], self.analyzer.mid_kline["high"])
-                # reset high and low points after finding the middle 
+                self.trader.place_short_trade(
+                    self.analyzer.high_kline["high"],
+                    self.analyzer.low_kline["low"],
+                    self.analyzer.mid_kline["high"],
+                )
+                self.trader.place_long_trade(
+                    self.analyzer.high_kline["high"],
+                    self.analyzer.low_kline["low"],
+                    self.analyzer.mid_kline["high"],
+                )
+                # reset high and low points after finding the middle
                 self.analyzer.reset_points()
 
             time.sleep(60)
@@ -239,25 +278,29 @@ def main():
 
     kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
     analyzer = PriceAnalyzer(
-            args.time_window,
-            args.growth_percent,
-            args.drop_percent,
-        )
+        args.time_window,
+        args.growth_percent,
+        args.drop_percent,
+    )
     trader = Trader()
     dispatcher = Dispatcher(
-            analyzer,
-            trader,
-            kline_manager,
-        )
+        analyzer,
+        trader,
+        kline_manager,
+    )
 
     if args.real_time:
         dispatcher.real_time_monitoring()
     else:
         analysis_end_time = get_unix_timestamp(args.analysis_end_time)
         if not args.analysis_start_time:
-            binance_foundation_date = get_unix_timestamp(datetime.strptime("2017-07-01", "%Y-%m-%d"))
+            binance_foundation_date = get_unix_timestamp(
+                datetime.strptime("2017-07-01", "%Y-%m-%d")
+            )
             # get kline to to check the date of the first kline in binance
-            klines = get_klines(binance_foundation_date, analysis_end_time, args.coin_symbol)
+            klines = get_klines(
+                binance_foundation_date, analysis_end_time, args.coin_symbol
+            )
             # find start time for analysis
             analysis_start_time = int(klines[0][0]) + args.time_window * 60 * 60 * 1000
         else:
@@ -278,8 +321,13 @@ def main():
         analyzed_klines, trades = dispatcher.run_for_historical_data()
 
         with open(output_file, "w") as file:
-            json.dump({"klines": analyzed_klines, "trades": trades}, file, default=serialize_trade, indent=4)
-    
+            json.dump(
+                {"klines": analyzed_klines, "trades": trades},
+                file,
+                default=serialize_trade,
+                indent=4,
+            )
+
         if args.draw_graph:
             create_graph(output_file)
         trader.log_trade_summary()
