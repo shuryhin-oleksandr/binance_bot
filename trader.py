@@ -7,7 +7,7 @@ class Trade:
         self.entry_price = entry_price
         self.stop_price = stop_price
         self.take_profit = take_profit
-        self.status = None  # 'success', 'failure', 'in_progress' or 'created'\
+        self.status = "created"  # 'success', 'failure', 'in_progress' or 'created'\
         self.close_time = None
         self.entry_time = None
 
@@ -146,5 +146,5 @@ class Trader:
 
     def has_uncompleted_trade(self):
         return any(
-            trade.status is None or trade.status == "in_progress" for trade in self.trades
+            trade.status == "created" or trade.status == "in_progress" for trade in self.trades
         )
