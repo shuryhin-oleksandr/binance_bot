@@ -113,7 +113,7 @@ class Trader:
         time = kline["closeTime"]
 
         # if trade is not in_progressed
-        if trade.status is None:
+        if trade.status == "created":
             is_long_order_in_progress = trade.trade_type == "long" and high_price >= trade.entry_price
             is_short_order_in_progress = trade.trade_type == "short" and low_price <= trade.entry_price
             if is_long_order_in_progress or is_short_order_in_progress:
