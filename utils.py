@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from datetime import datetime
 
@@ -51,6 +52,35 @@ def parse_date(date_str):
     except ValueError:
         # If time is missing, set it to "00:00:00" by default
         return datetime.strptime(date_str, "%Y-%m-%d")
+
+
+def determine_analysis_start_time(analysis_end_time, time_window, coin):
+    from binance_api import get_klines
+
+    binance_foundation_date = get_unix_timestamp(datetime.strptime("2017-07-01", "%Y-%m-%d"))
+    klines = get_klines(binance_foundation_date, analysis_end_time, coin)
+    return int(klines[0][0]) + time_window * 60 * 60 * 1000
+
+
+def make_dir(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+
+def generate_output_file_path(output_directory, file_prefix, symbol, start_time, end_time, file_format=".json"):
+    str_start_time = convert_unix_to_date_only_str(start_time)
+    str_end_time = convert_unix_to_date_only_str(end_time)
+    file_number = get_next_file_number(directory=output_directory, format=file_format)
+    return f"{output_directory}/{file_number}_{file_prefix}_{symbol}_{str_start_time}_{str_end_time}{file_format}"
+
+
+def serialize_object(obj):
+    return obj.__dict__  if hasattr(obj, "__dict__") else str(obj)
+
+
+def save_to_json_file(data, file_path):
+    with open(file_path, "w") as file:
+        json.dump(data, file, default=serialize_object, indent=4)
 
 
 def get_unix_timestamp(date):

@@ -3,35 +3,35 @@ from utils import logger, convert_unix_full_date_str
 
 class Trade:
     def __init__(self, trade_type, entry_price, stop_price, take_profit):
-        self.trade_type = trade_type  # 'short' або 'long'
+        self.trade_type = trade_type  # 'short' or 'long'
         self.entry_price = entry_price
         self.stop_price = stop_price
         self.take_profit = take_profit
-        self.status = None  # 'success', 'failure' або 'open'\
+        self.status = None  # 'success', 'failure', 'in_progress' or 'created'\
         self.close_time = None
-        self.open_time = None
+        self.entry_time = None
 
     def close_trade(self, outcome, time):
         self.status = outcome
         self.close_time = time
 
-    def open_trade(self, time):
-        self.status = "open"
-        self.open_time = time
+    def in_progress_trade(self, time):
+        self.status = "in_progress"
+        self.entry_time = time
 
-    def get_general_trade_field(self):
+    def get_info(self):
         return f"Type: {self.trade_type}, Entry Price: {self.entry_price}, Stop Price: {self.stop_price}, Take Profit: {self.take_profit}"
 
-    def log_opened_trade(self):
-        trade_field = self.get_general_trade_field()
+    def log_in_progress_trade(self):
+        trade_field = self.get_info()
         logger.info(
-            f"Trade opened: {trade_field}, Open Time: {convert_unix_full_date_str(self.open_time)}"
+            f"Trade in progress: {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
         )
 
     def log_completed_trade(self):
-        trade_field = self.get_general_trade_field()
+        trade_field = self.get_info()
         logger.info(
-            f"Trade completed: Status: {self.status}, {trade_field}, Open Time: {convert_unix_full_date_str(self.open_time)}, "
+            f"Trade completed: Status: {self.status}, {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
             f"Close Time: {convert_unix_full_date_str(self.close_time)}"
         )
 
@@ -68,20 +68,20 @@ class Trader:
                     profit -= trade.stop_price - trade.entry_price
         return profit
 
-    def calculate_trade_parameters(self, high, low):
+    def get_sideway_height_deviation(self, high, low):
         sideway_height = (high / low) - 1
         deviation = 0.05 * sideway_height
         return deviation, sideway_height
 
-    def calculate_trade_parameters_short_order(self, high, low, mid):
-        deviation, sideway_height = self.calculate_trade_parameters(high, low)
+    def get_sideway_height_deviation_short_order(self, high, low, mid):
+        deviation, sideway_height = self.get_sideway_height_deviation(high, low)
         short_entry = high * (1 + deviation)
         short_stop = high * (1 + sideway_height / 2)
         short_take_profit = mid
         return short_entry, short_stop, short_take_profit
 
-    def calculate_trade_parameters_long_order(self, high, low, mid):
-        deviation, sideway_height = self.calculate_trade_parameters(high, low)
+    def get_sideway_height_deviation_long_order(self, high, low, mid):
+        deviation, sideway_height = self.get_sideway_height_deviation(high, low)
         long_entry = low * (1 - deviation)
         long_stop = low * (1 - sideway_height / 2)
         long_take_profit = mid
@@ -89,7 +89,7 @@ class Trader:
 
     def place_short_trade(self, high, low, mid):
         entry_price, stop_price, take_profit = (
-            self.calculate_trade_parameters_short_order(high, low, mid)
+            self.get_sideway_height_deviation_short_order(high, low, mid)
         )
         trade = Trade("short", entry_price, stop_price, take_profit)
         self.trades.append(trade)
@@ -97,7 +97,7 @@ class Trader:
 
     def place_long_trade(self, high, low, mid):
         entry_price, stop_price, take_profit = (
-            self.calculate_trade_parameters_long_order(high, low, mid)
+            self.get_sideway_height_deviation_long_order(high, low, mid)
         )
         trade = Trade("long", entry_price, stop_price, take_profit)
         self.trades.append(trade)
@@ -112,15 +112,15 @@ class Trader:
         high_price = kline["high"]
         time = kline["closeTime"]
 
-        # if trade is not opened
+        # if trade is not in_progressed
         if trade.status is None:
-            is_long_order_open = trade.trade_type == "long" and low_price >= trade.entry_price
-            is_short_order_open = trade.trade_type == "short" and high_price <= trade.entry_price
-            if is_long_order_open or is_short_order_open:
-                trade.open_trade(time)
-                trade.log_opened_trade()
+            is_long_order_in_progress = trade.trade_type == "long" and high_price >= trade.entry_price
+            is_short_order_in_progress = trade.trade_type == "short" and low_price <= trade.entry_price
+            if is_long_order_in_progress or is_short_order_in_progress:
+                trade.in_progress_trade(time)
+                trade.log_in_progress_trade()
 
-        elif trade.status == "open":
+        elif trade.status == "in_progress":
 
             if trade.trade_type == "short":
                 if low_price <= trade.take_profit:
@@ -146,5 +146,5 @@ class Trader:
 
     def has_uncompleted_trade(self):
         return any(
-            trade.status is None or trade.status == "open" for trade in self.trades
+            trade.status is None or trade.status == "in_progress" for trade in self.trades
         )
