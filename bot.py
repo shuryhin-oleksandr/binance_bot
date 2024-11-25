@@ -75,14 +75,14 @@ class PriceAnalyzer:
         self.low_kline = None
         self.mid_kline = None
     
-    def is_new_high_kline(self, kline, high_price, min_price):
+    def is_new_high_kline(self, kline, min_price):
 
         # if kline higher than the existing high kline
         if self.high_kline and not self.low_kline and self._is_highest_kline(kline):
             return True
         else:
             calculated_target_price_growth_percent = (
-                (high_price - min_price) / min_price
+                (kline["high"] - min_price) / min_price
             ) * 100
             # if the new impulse is higher than the previous one
             if (
@@ -96,8 +96,19 @@ class PriceAnalyzer:
                 return True
         return False
 
+    def is_new_low_kline(self, kline):
+        if self.high_kline:
+            calculated_target_price_drop_percent = (
+                (self.high_kline["high"] - kline["low"]) / self.high_kline["high"]
+            ) * 100
+            kline["target_price_drop_percent"] = calculated_target_price_drop_percent
+
+            return calculated_target_price_drop_percent >= self.target_price_drop_percent and self._is_lowest_kline(kline)
+
+    def is_new_middle_kline(self, kline):
+        return (self.high_kline and self.low_kline) and kline["high"] >= self.mid_price
+
     def _analyze_kline(self, kline, min_price):
-        high_price = kline["high"]
         analyzed_klines = {  # save only data needed for plotting
             "status": "",  # one of: low, high, mid or none
             "time": kline[
@@ -105,36 +116,22 @@ class PriceAnalyzer:
             ],  # save the closeTime as x coordinate to show the kline
         }
 
-        if self.is_new_high_kline(kline, high_price, min_price):
+        if self.is_new_high_kline(kline, min_price):
             analyzed_klines["status"] = "high"
-            analyzed_klines["price"] = high_price # save the high price as y coordinate to show the kline
+            analyzed_klines["price"] = kline["high"] # save the high price as y coordinate to show the kline
             self.high_kline = kline
             log_high_kline(kline)
             return analyzed_klines
 
-        # TODO: Add phase property, which can be one of: idle, high_found, low_found, mid_found
-        low_price = kline["low"]
-        if self.high_kline:
-            calculated_target_price_drop_percent = (
-                (self.high_kline["high"] - low_price) / self.high_kline["high"]
-            ) * 100
-            kline["target_price_drop_percent"] = calculated_target_price_drop_percent
-            if (
-                calculated_target_price_drop_percent >= self.target_price_drop_percent
-                and self._is_lowest_kline(kline)
-            ):
-                self.low_kline = kline
-                analyzed_klines["status"] = "low"
-                analyzed_klines["price"] = kline["low"]
-                self.mid_price = self.calculate_middle_price()
-                self.mid_kline = None
-                log_low_kline(kline)
-                return analyzed_klines
+        if self.is_new_low_kline(kline):
+            self.low_kline = kline
+            analyzed_klines["status"] = "low"
+            analyzed_klines["price"] = kline["low"]
+            self.mid_price = self.calculate_middle_price()
+            log_low_kline(kline)
+            return analyzed_klines
 
-        if (
-            (self.high_kline and self.low_kline)
-            and high_price >= self.mid_price
-        ):
+        if self.is_new_middle_kline(kline):
             analyzed_klines["status"] = "mid"
             analyzed_klines["price"] = kline["high"]
             self.mid_kline = kline
