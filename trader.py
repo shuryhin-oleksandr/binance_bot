@@ -1,4 +1,12 @@
+from enum import Enum
 from utils import logger, convert_unix_full_date_str
+
+
+class TradeStatus(Enum):
+    CREATED = "created"
+    IN_PROGRESS = "in_progress"
+    SUCCESS = "success"
+    FAILURE = "failure"
 
 
 class Trade:
@@ -7,16 +15,16 @@ class Trade:
         self.entry_price = entry_price
         self.stop_price = stop_price
         self.take_profit = take_profit
-        self.status = "created"  # 'success', 'failure', 'in_progress' or 'created'\
+        self.status = TradeStatus.CREATED
         self.close_time = None
         self.entry_time = None
 
-    def close_trade(self, outcome, time):
+    def close_trade(self, outcome: TradeStatus, time):
         self.status = outcome
         self.close_time = time
 
-    def in_progress_trade(self, time):
-        self.status = "in_progress"
+    def set_in_progress_status(self, time):
+        self.status = TradeStatus.IN_PROGRESS
         self.entry_time = time
 
     def get_info(self):
@@ -31,7 +39,7 @@ class Trade:
     def log_completed_trade(self):
         trade_field = self.get_info()
         logger.info(
-            f"Trade completed: Status: {self.status}, {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
+            f"Trade completed: Status: {self.status.value}, {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
             f"Close Time: {convert_unix_full_date_str(self.close_time)}"
         )
 
@@ -42,11 +50,11 @@ class Trader:
 
     @property
     def failed_trades(self):
-        return len([trade for trade in self.trades if trade.status == "failure"])
+        return len([trade for trade in self.trades if trade.status == TradeStatus.FAILURE])
 
     @property
     def successful_trades(self):
-        return len([trade for trade in self.trades if trade.status == "success"])
+        return len([trade for trade in self.trades if trade.status == TradeStatus.SUCCESS])
 
     @property
     def total_trades(self):
@@ -56,12 +64,12 @@ class Trader:
     def total_profit(self):
         profit = 0
         for trade in self.trades:
-            if trade.status == "success":
+            if trade.status == TradeStatus.SUCCESS:
                 if trade.trade_type == "long":
                     profit += trade.take_profit - trade.entry_price
                 elif trade.trade_type == "short":
                     profit += trade.entry_price - trade.take_profit
-            elif trade.status == "failure":
+            elif trade.status == TradeStatus.FAILURE:
                 if trade.trade_type == "long":
                     profit -= trade.entry_price - trade.stop_price
                 elif trade.trade_type == "short":
@@ -73,14 +81,14 @@ class Trader:
         deviation = 0.05 * sideway_height
         return deviation, sideway_height
 
-    def get_sideway_height_deviation_short_order(self, high, low, mid):
+    def get_short_order_params(self, high, low, mid):
         deviation, sideway_height = self.get_sideway_height_deviation(high, low)
         short_entry = high * (1 + deviation)
         short_stop = high * (1 + sideway_height / 2)
         short_take_profit = mid
         return short_entry, short_stop, short_take_profit
 
-    def get_sideway_height_deviation_long_order(self, high, low, mid):
+    def get_long_order_params(self, high, low, mid):
         deviation, sideway_height = self.get_sideway_height_deviation(high, low)
         long_entry = low * (1 - deviation)
         long_stop = low * (1 - sideway_height / 2)
@@ -89,7 +97,7 @@ class Trader:
 
     def place_short_trade(self, high, low, mid):
         entry_price, stop_price, take_profit = (
-            self.get_sideway_height_deviation_short_order(high, low, mid)
+            self.get_short_order_params(high, low, mid)
         )
         trade = Trade("short", entry_price, stop_price, take_profit)
         self.trades.append(trade)
@@ -97,7 +105,7 @@ class Trader:
 
     def place_long_trade(self, high, low, mid):
         entry_price, stop_price, take_profit = (
-            self.get_sideway_height_deviation_long_order(high, low, mid)
+            self.get_long_order_params(high, low, mid)
         )
         trade = Trade("long", entry_price, stop_price, take_profit)
         self.trades.append(trade)
@@ -112,30 +120,28 @@ class Trader:
         high_price = kline["high"]
         time = kline["closeTime"]
 
-        # if trade is not in_progressed
-        if trade.status == "created":
+        if trade.status == TradeStatus.CREATED:
             is_long_order_in_progress = trade.trade_type == "long" and high_price >= trade.entry_price
             is_short_order_in_progress = trade.trade_type == "short" and low_price <= trade.entry_price
             if is_long_order_in_progress or is_short_order_in_progress:
-                trade.in_progress_trade(time)
+                trade.set_in_progress_status(time)
                 trade.log_in_progress_trade()
 
-        elif trade.status == "in_progress":
-
+        elif trade.status == TradeStatus.IN_PROGRESS:
             if trade.trade_type == "short":
                 if low_price <= trade.take_profit:
-                    trade.close_trade("success", time)
+                    trade.close_trade(TradeStatus.SUCCESS, time)
                     trade.log_completed_trade()
                 elif high_price >= trade.stop_price:
-                    trade.close_trade("failure", time)
+                    trade.close_trade(TradeStatus.FAILURE, time)
                     trade.log_completed_trade()
 
             elif trade.trade_type == "long":
                 if high_price >= trade.take_profit:
-                    trade.close_trade("success", time)
+                    trade.close_trade(TradeStatus.SUCCESS, time)
                     trade.log_completed_trade()
                 elif low_price <= trade.stop_price:
-                    trade.close_trade("failure", time)
+                    trade.close_trade(TradeStatus.FAILURE, time)
                     trade.log_completed_trade()
 
     def log_trade_summary(self):
@@ -146,5 +152,5 @@ class Trader:
 
     def has_uncompleted_trade(self):
         return any(
-            trade.status == "created" or trade.status == "in_progress" for trade in self.trades
+            trade.status in {TradeStatus.CREATED, TradeStatus.IN_PROGRESS} for trade in self.trades
         )

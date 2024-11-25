@@ -1,18 +1,20 @@
+import os
 import argparse
 import time
+import json
 from datetime import datetime
 from draw_graph import create_graph
 from trader import Trader
 from utils import (
     get_unix_timestamp,
     determine_analysis_start_time,
-    generate_output_file_path,
+    convert_unix_to_date_only_str,
+    get_next_file_number,
     log_high_kline,
     log_low_kline,
     log_middle_kline,
     parse_date,
-    save_to_json_file,
-    make_dir
+    serialize_object,
 )
 
 
@@ -23,13 +25,13 @@ DEVIATION = 0.05
 OUTPUT_DIRECTORY = "analyzed_data"
 
 
-def process_kline(kline):
-    processed_kline = {  # save only data needed for plotting
+def prepare_kline_plot_data(kline):
+    kline = {  # save only data needed for plotting
             "status": "",
             "time": kline["closeTime"],  # save the closeTime as x coordinate to show the kline
             "price": kline["close"] # save close price as y coordinate
         }
-    return processed_kline
+    return kline
 
 
 def get_min_price(
@@ -96,7 +98,7 @@ class PriceAnalyzer:
 
     def _analyze_kline(self, kline, min_price):
         high_price = kline["high"]
-        processed_kline = {  # save only data needed for plotting
+        analyzed_klines = {  # save only data needed for plotting
             "status": "",  # one of: low, high, mid or none
             "time": kline[
                 "closeTime"
@@ -104,11 +106,11 @@ class PriceAnalyzer:
         }
 
         if self.is_new_high_kline(kline, high_price, min_price):
-            processed_kline["status"] = "high"
-            processed_kline["price"] = high_price # save the high price as y coordinate to show the kline
+            analyzed_klines["status"] = "high"
+            analyzed_klines["price"] = high_price # save the high price as y coordinate to show the kline
             self.high_kline = kline
             log_high_kline(kline)
-            return processed_kline
+            return analyzed_klines
 
         # TODO: Add phase property, which can be one of: idle, high_found, low_found, mid_found
         low_price = kline["low"]
@@ -122,25 +124,25 @@ class PriceAnalyzer:
                 and self._is_lowest_kline(kline)
             ):
                 self.low_kline = kline
-                processed_kline["status"] = "low"
-                processed_kline["price"] = kline["low"]
+                analyzed_klines["status"] = "low"
+                analyzed_klines["price"] = kline["low"]
                 self.mid_price = self.calculate_middle_price()
                 self.mid_kline = None
                 log_low_kline(kline)
-                return processed_kline
+                return analyzed_klines
 
         if (
             (self.high_kline and self.low_kline)
             and high_price >= self.mid_price
         ):
-            processed_kline["status"] = "mid"
-            processed_kline["price"] = kline["high"]
+            analyzed_klines["status"] = "mid"
+            analyzed_klines["price"] = kline["high"]
             self.mid_kline = kline
             log_middle_kline(kline)
-            return processed_kline
+            return analyzed_klines
 
-        processed_kline["price"] = kline["close"]
-        return processed_kline
+        analyzed_klines["price"] = kline["close"]
+        return analyzed_klines
 
     def _analyze_snapshot(self, klines, snapshot_end):
         snapshot_start = snapshot_end - self.snapshot_klines_count
@@ -180,8 +182,8 @@ class Dispatcher:
             # the analyzer does not work while the trader is working
             if self.trader.has_uncompleted_trade():
                 self.trader.evaluate_trades(current_kline)
-                processed_kline = process_kline(current_kline)
-                analyzed_klines.append(processed_kline)
+                kline = prepare_kline_plot_data(current_kline)
+                analyzed_klines.append(kline)
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
@@ -241,27 +243,42 @@ class Dispatcher:
                 self.analyzer.reset_klines()
 
             time.sleep(60)
+        
 
-    def save_and_visualize(self, draw_graph=False):
-        """
-        Run the historical data analysis, save the results to a file, and optionally visualize the data.
-        """
-        make_dir(OUTPUT_DIRECTORY)
+class VisualizationManager:
+    def __init__(self, output_directory):
+        self.output_directory = output_directory
+        if not os.path.exists(self.output_directory):
+            os.makedirs(self.output_directory)
 
-        output_file = generate_output_file_path(
-            output_directory=OUTPUT_DIRECTORY,
-            file_prefix="analyzed_data",
-            symbol=self.kline_manager.symbol,
-            start_time=self.analysis_start_time,
-            end_time=self.analysis_end_time,
+    def generate_output_file_path(self, file_prefix, symbol, start_time, end_time, file_format=".json"):
+        str_start_time = convert_unix_to_date_only_str(start_time)
+        str_end_time = convert_unix_to_date_only_str(end_time)
+        file_number = get_next_file_number(directory=self.output_directory, format=file_format)
+        return f"{self.output_directory}/{file_number}_{file_prefix}_{symbol}_{str_start_time}_{str_end_time}{file_format}"
+
+    def save_to_json_file(self, data, file_path):
+        with open(file_path, "w") as file:
+            json.dump(data, file, default=serialize_object, indent=4)
+
+    def visualize_data(self, file_path):
+        create_graph(file_path)
+
+    def save_and_visualize(self, analyzed_klines, trades, file_prefix, symbol, start_time, end_time, draw_graph=False):
+        """
+        Save the results to a file, and optionally visualize the data.
+        """
+        output_file = self.generate_output_file_path(
+            file_prefix=file_prefix,
+            symbol=symbol,
+            start_time=start_time,
+            end_time=end_time,
         )
 
-        analyzed_klines, trades = self.run_for_historical_data()
-
-        save_to_json_file({"klines": analyzed_klines, "trades": trades}, output_file)
+        self.save_to_json_file({"klines": analyzed_klines, "trades": trades}, output_file)
 
         if draw_graph:
-            create_graph(output_file)
+            self.visualize_data(output_file)
 
 
 def main():
@@ -329,7 +346,19 @@ def main():
 
         dispatcher.set_time_interval(analysis_start_time, analysis_end_time)
 
-        dispatcher.save_and_visualize(args.draw_graph)
+        analyzed_klines, trades = dispatcher.run_for_historical_data()
+
+        visualization_manager = VisualizationManager(OUTPUT_DIRECTORY)
+        visualization_manager.save_and_visualize(
+            analyzed_klines=analyzed_klines,
+            trades=trades,
+            file_prefix="analyzed_data",
+            symbol=args.coin_symbol,
+            start_time=analysis_start_time,
+            end_time=analysis_end_time,
+            draw_graph=args.draw_graph
+        )
+
 
 if __name__ == "__main__":
     main()
