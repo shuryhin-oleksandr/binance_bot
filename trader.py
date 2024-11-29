@@ -21,12 +21,13 @@ class Order:
 
     @property
     def profit(self):
+        order_investment = 1000  # USDT
         if self.status != TradeStatus.CLOSED:
             return 0
         if self.trade_type == "long":
-            return self.close_price - self.entry_price
+            return (self.close_price - self.entry_price) / self.entry_price * order_investment
         # if the order type is short, then the the selling price is entry_price and the buying price is close_price
-        return self.entry_price - self.close_price
+        return (self.entry_price - self.close_price) / self.close_price * order_investment
 
     def close(self, time, price):
         self.status = TradeStatus.CLOSED
