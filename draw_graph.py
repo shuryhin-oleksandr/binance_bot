@@ -9,7 +9,7 @@ def create_graph(json_file):
         # TODO: read a certain amount of data 
         data = json.load(file)
         klines = data.get("klines", [])
-        trades = data.get("trades", [])
+        orders = data.get("orders", [])
 
         graphic.create_plot_for_historical_data(klines)
 
