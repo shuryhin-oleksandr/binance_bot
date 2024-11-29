@@ -142,12 +142,7 @@ class PriceAnalyzer:
 
 
 class Dispatcher:
-    def __init__(
-        self,
-        analyzer,
-        trader,
-        kline_manager,
-    ):
+    def __init__(self, analyzer, trader, kline_manager):
         self.analyzer = analyzer
         self.trader = trader
         self.kline_manager = kline_manager
@@ -159,9 +154,8 @@ class Dispatcher:
     def run_for_historical_data(self):
         # Fetch all klines for the analysis period
         klines = self.kline_manager.find_or_fetch_klines_in_range(
-            self.analysis_start_time
-            - self.analyzer.time_window,  # Start time with buffer for analysis
-            self.analysis_end_time,  # End time of analysis
+            self.analysis_start_time - self.analyzer.time_window,  # Start time with buffer for analysis
+            self.analysis_end_time,
         )
         analyzed_klines = []
         orders = []
