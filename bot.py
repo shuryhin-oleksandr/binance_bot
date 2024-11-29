@@ -74,26 +74,20 @@ class PriceAnalyzer:
         self.high_kline = None
         self.low_kline = None
         self.mid_kline = None
-    
-    def is_new_high_kline(self, kline, min_price):
 
-        # if kline higher than the existing high kline
-        if self.high_kline and not self.low_kline and self._is_highest_kline(kline):
+    def is_new_high_kline(self, kline, min_price):
+        kline_is_higher_than_existing = self.high_kline and not self.low_kline and self._is_highest_kline(kline)
+        if kline_is_higher_than_existing:
             return True
-        else:
-            calculated_target_price_growth_percent = (
-                (kline["high"] - min_price) / min_price
-            ) * 100
-            # if the new impulse is higher than the previous one
-            if (
-                calculated_target_price_growth_percent
-                >= self.target_price_growth_percent
-                and self._is_highest_kline(kline)
-            ):
-                kline["target_price_growth_percent"] = (
-                    calculated_target_price_growth_percent
-                )
-                return True
+
+        current_kline_growth_percent = ((kline["high"] - min_price) / min_price) * 100
+        new_impulse_is_higher_than_previous = (
+                current_kline_growth_percent >= self.target_price_growth_percent and self._is_highest_kline(kline)
+        )
+        if new_impulse_is_higher_than_previous:
+            kline["target_price_growth_percent"] = current_kline_growth_percent
+            return True
+
         return False
 
     def is_new_low_kline(self, kline):
@@ -205,7 +199,7 @@ class Dispatcher:
             analyzed_klines.append(analyzed_kline)
         self.summarize_trader_results()
         return analyzed_klines, orders
-    
+
     def summarize_trader_results(self):
         self.trader.log_trade_summary()
 
@@ -240,7 +234,7 @@ class Dispatcher:
                 self.analyzer.reset_klines()
 
             time.sleep(60)
-        
+
 
 class VisualizationManager:
     def __init__(self, output_directory):
