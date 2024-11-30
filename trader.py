@@ -44,8 +44,8 @@ class Order:
         time = kline["closeTime"]
 
         if self.status == TradeStatus.OPEN:
-            is_long_fulfilled = self.trade_type == "long" and high_price >= self.entry_price
-            is_short_fulfilled = self.trade_type == "short" and low_price <= self.entry_price
+            is_long_fulfilled = self.trade_type == "long" and low_price <= self.entry_price
+            is_short_fulfilled = self.trade_type == "short" and high_price >= self.entry_price
 
             if is_long_fulfilled or is_short_fulfilled:
                 self.fullfill(time)
@@ -149,8 +149,8 @@ class Trader:
 
     def log_trade_summary(self):
         logger.info(
-            f"Order summary: Total={self.total_trades}, Successful={self.successful_trades_count}, "
-            f"Failed={self.failed_trades_count}, Net profit/loss={self.total_profit:.2f}"
+            f"Order summary: Total={self.total_trades}, Positive={self.successful_trades_count}, "
+            f"Negative={self.failed_trades_count}, Net profit/loss={self.total_profit:.2f}"
         )
 
     def has_uncompleted_trade(self):

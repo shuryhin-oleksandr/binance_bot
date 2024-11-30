@@ -101,5 +101,5 @@ def log_low_kline(kline):
     )
 
 
-def log_sideway(high_kline, low_kline, mid_price):
-    logger.info(f"Sideway, High price: {high_kline['high']}, Low price: {low_kline['low']}, Mid price: {mid_price}")
+def log_sideway(high_kline, low_kline, mid_kline, mid_price):
+    logger.info(f"Sideway, High price: {high_kline['high']}, Low price: {low_kline['low']}, Mid price: {mid_price}, Time: {convert_unix_full_date_str(mid_kline['closeTime'])}")

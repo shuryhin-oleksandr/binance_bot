@@ -130,7 +130,7 @@ class PriceAnalyzer:
             analyzed_kline["price"] = kline["high"]
             self.mid_kline = kline
             log_middle_kline(kline)
-            log_sideway(self.high_kline, self.low_kline, self.mid_price)
+            log_sideway(self.high_kline, self.low_kline, self.mid_kline, self.mid_price)
             return analyzed_kline
 
         analyzed_kline["price"] = kline["close"]
