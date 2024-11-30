@@ -81,21 +81,25 @@ def get_kline_time(kline):
 
 
 def log_middle_kline(kline):
-    logger.info(f"Middle kline: {get_kline_time(kline)}, High price: {kline['high']}")
+    logger.debug(f"Middle kline: {get_kline_time(kline)}, High price: {kline['high']}")
 
 
 def log_high_kline(kline):
     if 'target_price_growth_percent' in kline is not None:
-        logger.info(
+        logger.debug(
             f"New impulse. High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
         )
     else:
-        logger.info(
+        logger.debug(
             f"High kline: {get_kline_time(kline)}, High price: {kline['high']}"
         )
 
 
 def log_low_kline(kline):
-    logger.info(
-        f"Low kline: (the price has dropped by {kline['target_price_drop_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
+    logger.debug(
+        f"Low kline: (the price has dropped by {kline['target_price_drop_percent']}%) {get_kline_time(kline)}, Low price: {kline['low']}"
     )
+
+
+def log_sideway(high_kline, low_kline, mid_price):
+    logger.info(f"Sideway, High price: {high_kline['high']}, Low price: {low_kline['low']}, Mid price: {mid_price}")
