@@ -3,8 +3,8 @@ from utils import logger, convert_unix_full_date_str
 
 
 class TradeStatus(Enum):
-    CREATED = "created"
-    IN_PROGRESS = "in_progress"
+    OPEN = "open"
+    FULFILLED = "fulfilled"
     CLOSED = "closed"
 
 
@@ -14,7 +14,7 @@ class Order:
         self.entry_price = entry_price
         self.stop_price = stop_price
         self.take_profit_price = take_profit_price
-        self.status = TradeStatus.CREATED
+        self.status = TradeStatus.OPEN
         self.close_time = None
         self.entry_time = None
         self.close_price = None
@@ -35,7 +35,7 @@ class Order:
         self.close_price = price
 
     def fullfill(self, time):
-        self.status = TradeStatus.IN_PROGRESS
+        self.status = TradeStatus.FULFILLED
         self.entry_time = time
 
     def evaluate(self, kline):
@@ -43,44 +43,44 @@ class Order:
         high_price = kline["high"]
         time = kline["closeTime"]
 
-        if self.status == TradeStatus.CREATED:
+        if self.status == TradeStatus.OPEN:
             is_long_fulfilled = self.trade_type == "long" and high_price >= self.entry_price
             is_short_fulfilled = self.trade_type == "short" and low_price <= self.entry_price
 
             if is_long_fulfilled or is_short_fulfilled:
                 self.fullfill(time)
-                self.log_in_progress_trade()
+                self.log_order_fulfilled()
 
-        elif self.status == TradeStatus.IN_PROGRESS:
+        elif self.status == TradeStatus.FULFILLED:
             if self.trade_type == "short":
                 if low_price <= self.take_profit_price:
                     self.close(time, self.take_profit_price)
-                    self.log_completed_trade()
+                    self.log_order_closed()
                 elif high_price >= self.stop_price:
                     self.close(time, self.stop_price)
-                    self.log_completed_trade()
+                    self.log_order_closed()
 
             elif self.trade_type == "long":
                 if high_price >= self.take_profit_price:
                     self.close(time, self.take_profit_price)
-                    self.log_completed_trade()
+                    self.log_order_closed()
                 elif low_price <= self.stop_price:
                     self.close(time, self.stop_price)
-                    self.log_completed_trade()
+                    self.log_order_closed()
 
     def get_info(self):
         return f"Type: {self.trade_type}, Entry Price: {self.entry_price}, Stop Price: {self.stop_price}, Take Profit: {self.take_profit_price}"
 
-    def log_in_progress_trade(self):
-        trade_field = self.get_info()
+    def log_order_fulfilled(self):
+        order_info = self.get_info()
         logger.info(
-            f"Order in progress: {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
+            f"Order fulfilled: {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
         )
 
-    def log_completed_trade(self):
-        trade_field = self.get_info()
+    def log_order_closed(self):
+        order_info = self.get_info()
         logger.info(
-            f"Order completed: Profit: {self.profit}, {trade_field}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
+            f"Order closed: Profit: {self.profit}, {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
             f"Close Time: {convert_unix_full_date_str(self.close_time)}"
         )
 
@@ -155,5 +155,5 @@ class Trader:
 
     def has_uncompleted_trade(self):
         return any(
-            order.status in {TradeStatus.CREATED, TradeStatus.IN_PROGRESS} for order in self.orders
+            order.status in {TradeStatus.OPEN, TradeStatus.FULFILLED} for order in self.orders
         )
