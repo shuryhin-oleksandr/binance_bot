@@ -18,10 +18,13 @@ class Order:
         self.close_time = None
         self.entry_time = None
         self.close_price = None
+        self.is_canceled = False
 
     @property
     def profit(self):
         order_investment = 1000  # USDT
+        if not self.close_price:
+            return 0
         if self.status != TradeStatus.CLOSED:
             return 0
         if self.trade_type == "long":
@@ -33,6 +36,12 @@ class Order:
         self.status = TradeStatus.CLOSED
         self.close_time = time
         self.close_price = price
+
+    def cancel(self):
+        self.status = TradeStatus.CLOSED
+        self.close_time = None
+        self.close_price = None
+        self.is_canceled = True
 
     def fullfill(self, time):
         self.status = TradeStatus.FULFILLED
@@ -79,9 +88,11 @@ class Order:
 
     def log_order_closed(self):
         order_info = self.get_info()
+        entry_time_str = convert_unix_full_date_str(self.entry_time) if self.entry_time else "N/A"
+        close_time_str = convert_unix_full_date_str(self.close_time) if self.close_time else "N/A"
         logger.info(
-            f"Order closed: Profit: {self.profit}, {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}, "
-            f"Close Time: {convert_unix_full_date_str(self.close_time)}"
+            f"Order closed: Profit: {self.profit}, {order_info}, Entry Time: {entry_time_str}, "
+            f"Close Time: {close_time_str}"
         )
 
 
@@ -146,6 +157,18 @@ class Trader:
     def evaluate_trades(self, kline):
         for order in self.orders:
             order.evaluate(kline)
+            if order.status == TradeStatus.CLOSED and order.close_price == order.stop_price:
+                self.cancel_opposite_order(order)
+
+    def cancel_opposite_order(self, closed_order):
+        last_short_order = self.orders[-2]
+        last_long_order = self.orders[-1]
+        if last_long_order == closed_order and not last_short_order.is_canceled:
+            last_short_order.cancel()
+            last_short_order.log_order_closed()
+        elif last_short_order == closed_order and not last_long_order.is_canceled:
+            last_long_order.cancel()
+            last_long_order.log_order_closed()
 
     def log_trade_summary(self):
         logger.info(
