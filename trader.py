@@ -104,7 +104,6 @@ class Order:
 class Trader:
     def __init__(self):
         self.orders = []
-        self.new_orders_in_sideway = False
         self.successful_sideway_orders = 0
 
     @property
@@ -172,11 +171,9 @@ class Trader:
         last_long_order = self.orders[-1]
         if last_long_order == closed_order and not last_short_order.status == OrderStatus.CANCELED:
             last_short_order.cancel()
-            self.new_orders_in_sideway = False
             last_short_order.log_order_closed()
         elif last_short_order == closed_order and not last_long_order.status == OrderStatus.CANCELED:
             last_long_order.cancel()
-            self.new_orders_in_sideway = False
             last_long_order.log_order_closed()
 
     def log_order_summary(self):
@@ -189,22 +186,3 @@ class Trader:
         return any(
             order.status in {OrderStatus.OPEN, OrderStatus.FULFILLED} for order in self.orders
         )
-
-    def handle_successful_close(self):
-        new_order = None
-        if len(self.orders) < 2 or self.orders[-1].additional_order:
-            return new_order
-        
-        last_short_order = self.orders[-2]
-        last_long_order = self.orders[-1]
-        if self.new_orders_in_sideway \
-                and last_long_order.status == OrderStatus.CLOSED and not last_long_order.status == OrderStatus.CANCELED:
-            new_order = self.place_long_order(last_long_order.high, last_long_order.low, last_long_order.mid)
-            new_order.additional_order = True
-            self.new_orders_in_sideway = False
-        elif self.new_orders_in_sideway \
-                and last_short_order.status == OrderStatus.CLOSED and not last_short_order.status == OrderStatus.CANCELED:
-            new_order = self.place_short_order(last_short_order.high, last_short_order.low, last_short_order.mid)
-            new_order.additional_order = True
-            self.new_orders_in_sideway = False
-        return new_order
