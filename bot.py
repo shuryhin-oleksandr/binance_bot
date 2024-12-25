@@ -166,24 +166,28 @@ class Dispatcher:
             current_kline = klines[index]
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_trade():
-                self.trader.evaluate_trades(current_kline)
+            if self.trader.has_uncompleted_order():
+                self.trader.evaluate_orders(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
+                
+                new_order = self.trader.handle_successful_close()
+                if new_order:
+                    orders.append(new_order)
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
-                self.trader.new_orders_in_sideway = True
+                # self.trader.new_orders_in_sideway = True
                 orders.append(
-                    self.trader.place_short_trade(
+                    self.trader.place_short_order(
                         self.analyzer.high_kline["high"],
                         self.analyzer.low_kline["low"],
                         self.analyzer.mid_kline["high"],
                     )
                 )
                 orders.append(
-                    self.trader.place_long_trade(
+                    self.trader.place_long_order(
                         self.analyzer.high_kline["high"],
                         self.analyzer.low_kline["low"],
                         self.analyzer.mid_kline["high"],
@@ -192,19 +196,14 @@ class Dispatcher:
 
                 self.analyzer.reset_klines()
 
-            new_orders = self.trader.handle_successful_close()
-            if new_orders:
-                orders.extend(new_orders)
-
             analyzed_klines.append(analyzed_kline)
         self.summarize_trader_results()
         return analyzed_klines, orders
 
     def summarize_trader_results(self):
-        self.trader.log_trade_summary()
+        self.trader.log_order_summary()
 
     def real_time_monitoring(self):
-        orders = []
         while True:
             current_time = int(datetime.now().timestamp() * 1000)
             start_time = (
@@ -215,29 +214,25 @@ class Dispatcher:
             )
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_trade():
-                self.trader.evaluate_trades(klines[-1])
+            if self.trader.has_uncompleted_order():
+                self.trader.evaluate_orders(klines[-1])
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
                 self.trader.new_orders_in_sideway = True
-                self.trader.place_short_trade(
+                self.trader.place_short_order(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"],
                     self.analyzer.mid_kline["high"],
                 )
-                self.trader.place_long_trade(
+                self.trader.place_long_order(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"],
                     self.analyzer.mid_kline["high"],
                 )
                 # reset high and low points after finding the middle
                 self.analyzer.reset_klines()
-
-            new_orders = self.trader.handle_successful_close()
-            if new_orders:
-                orders.extend(new_orders)
 
             time.sleep(60)
 
