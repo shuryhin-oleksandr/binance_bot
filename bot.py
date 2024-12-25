@@ -178,7 +178,6 @@ class Dispatcher:
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
-                # self.trader.new_orders_in_sideway = True
                 orders.append(
                     self.trader.place_short_order(
                         self.analyzer.high_kline["high"],
