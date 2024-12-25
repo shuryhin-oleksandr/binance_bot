@@ -174,6 +174,7 @@ class Dispatcher:
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
+                self.trader.new_orders_in_sideway = True
                 orders.append(
                     self.trader.place_short_trade(
                         self.analyzer.high_kline["high"],
@@ -191,6 +192,10 @@ class Dispatcher:
 
                 self.analyzer.reset_klines()
 
+            new_orders = self.trader.handle_successful_close()
+            if new_orders:
+                orders.extend(new_orders)
+
             analyzed_klines.append(analyzed_kline)
         self.summarize_trader_results()
         return analyzed_klines, orders
@@ -199,6 +204,7 @@ class Dispatcher:
         self.trader.log_trade_summary()
 
     def real_time_monitoring(self):
+        orders = []
         while True:
             current_time = int(datetime.now().timestamp() * 1000)
             start_time = (
@@ -215,6 +221,7 @@ class Dispatcher:
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
+                self.trader.new_orders_in_sideway = True
                 self.trader.place_short_trade(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"],
@@ -227,6 +234,10 @@ class Dispatcher:
                 )
                 # reset high and low points after finding the middle
                 self.analyzer.reset_klines()
+
+            new_orders = self.trader.handle_successful_close()
+            if new_orders:
+                orders.extend(new_orders)
 
             time.sleep(60)
 

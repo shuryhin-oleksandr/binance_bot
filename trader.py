@@ -9,7 +9,7 @@ class TradeStatus(Enum):
 
 
 class Order:
-    def __init__(self, trade_type, entry_price, stop_price, take_profit_price):
+    def __init__(self, trade_type, entry_price, stop_price, take_profit_price, high, low, mid):
         self.trade_type = trade_type  # 'short' or 'long'
         self.entry_price = entry_price
         self.stop_price = stop_price
@@ -19,6 +19,10 @@ class Order:
         self.entry_time = None
         self.close_price = None
         self.is_canceled = False
+
+        self.high = high
+        self.low = low
+        self.mid = mid
 
     @property
     def profit(self):
@@ -99,6 +103,7 @@ class Order:
 class Trader:
     def __init__(self):
         self.orders = []
+        self.new_orders_in_sideway = False
 
     @property
     def failed_trades_count(self):
@@ -142,7 +147,7 @@ class Trader:
         entry_price, stop_price, take_profit_price = (
             self.get_short_order_params(high, low, mid)
         )
-        order = Order("short", entry_price, stop_price, take_profit_price)
+        order = Order("short", entry_price, stop_price, take_profit_price, high, low, mid)
         self.orders.append(order)
         return order
 
@@ -150,7 +155,7 @@ class Trader:
         entry_price, stop_price, take_profit_price = (
             self.get_long_order_params(high, low, mid)
         )
-        order = Order("long", entry_price, stop_price, take_profit_price)
+        order = Order("long", entry_price, stop_price, take_profit_price, high, low, mid)
         self.orders.append(order)
         return order
 
@@ -165,9 +170,11 @@ class Trader:
         last_long_order = self.orders[-1]
         if last_long_order == closed_order and not last_short_order.is_canceled:
             last_short_order.cancel()
+            self.new_orders_in_sideway = False
             last_short_order.log_order_closed()
         elif last_short_order == closed_order and not last_long_order.is_canceled:
             last_long_order.cancel()
+            self.new_orders_in_sideway = False
             last_long_order.log_order_closed()
 
     def log_trade_summary(self):
@@ -180,3 +187,19 @@ class Trader:
         return any(
             order.status in {TradeStatus.OPEN, TradeStatus.FULFILLED} for order in self.orders
         )
+
+    def handle_successful_close(self):
+        new_orders = []
+        if len(self.orders) < 2:
+            return new_orders
+        
+        last_short_order = self.orders[-2]
+        last_long_order = self.orders[-1]
+        if self.new_orders_in_sideway \
+                and last_long_order.status == TradeStatus.CLOSED and not last_long_order.is_canceled \
+                and last_short_order.status == TradeStatus.CLOSED and not last_short_order.is_canceled:
+
+            new_orders.append(self.place_short_trade(last_short_order.high, last_short_order.low, last_short_order.mid))
+            new_orders.append(self.place_long_trade(last_long_order.high, last_long_order.low, last_long_order.mid))
+            self.new_orders_in_sideway = False
+        return new_orders
