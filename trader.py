@@ -111,7 +111,7 @@ class Order:
         order_info = self.get_info()
         status = "closed" if self.close_time and self.entry_time else "canceled"
         logger.info(
-            f"Order {status}: Profit: {self.profit}, {order_info}, Entry Time: {self.entry_time_str}, "
+            f"{self.type.capitalize()} order {status}: Profit: {self.profit}, {order_info}, Entry Time: {self.entry_time_str}, "
             f"Close Time: {self.close_time_str}"
         )
 
