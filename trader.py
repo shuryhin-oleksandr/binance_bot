@@ -11,7 +11,7 @@ class OrderStatus(Enum):
 
 
 class Order:
-    def __init__(self, type, entry_price, stop_price, take_profit_price, high, low, mid):
+    def __init__(self, type, entry_price, stop_price, take_profit_price):
         self.type = type  # 'short' or 'long'
         self.entry_price = entry_price
         self.stop_price = stop_price
@@ -20,10 +20,6 @@ class Order:
         self.close_time = None
         self.entry_time = None
         self.close_price = None
-
-        self.high = high
-        self.low = low
-        self.mid = mid
 
     @property
     def profit(self):
@@ -120,6 +116,9 @@ class Order:
 class Trader:
     def __init__(self):
         self.sideways_orders = []
+        self.high = None
+        self.low = None
+        self.mid = None
 
     @property
     def flat_orders(self):
@@ -152,45 +151,49 @@ class Trader:
     def add_subway(self, high, low, mid):
         self.start_new_sideway_period()
 
-        short_order = self.place_short_order(high, low, mid)
-        long_order = self.place_long_order(high, low, mid)
+        self.high = high
+        self.low = low
+        self.mid = mid
+        
+        short_order = self.place_short_order()
+        long_order = self.place_long_order()
         return short_order, long_order
 
-    def get_sideway_height_deviation(self, high, low):
-        sideway_height = (high / low) - 1
+    def get_sideway_height_deviation(self):
+        sideway_height = (self.high / self.low) - 1
         deviation = 0.05 * sideway_height
         return deviation, sideway_height
 
-    def get_short_order_params(self, high, low, mid):
-        deviation, sideway_height = self.get_sideway_height_deviation(high, low)
-        short_entry = high * (1 + deviation)
-        short_stop = high * (1 + sideway_height / 2)
-        short_take_profit = mid
+    def get_short_order_params(self):
+        deviation, sideway_height = self.get_sideway_height_deviation()
+        short_entry = self.high * (1 + deviation)
+        short_stop = self.high * (1 + sideway_height / 2)
+        short_take_profit = self.mid
         return short_entry, short_stop, short_take_profit
 
-    def get_long_order_params(self, high, low, mid):
-        deviation, sideway_height = self.get_sideway_height_deviation(high, low)
-        long_entry = low * (1 - deviation)
-        long_stop = low * (1 - sideway_height / 2)
-        long_take_profit = mid
+    def get_long_order_params(self):
+        deviation, sideway_height = self.get_sideway_height_deviation()
+        long_entry = self.low * (1 - deviation)
+        long_stop = self.low * (1 - sideway_height / 2)
+        long_take_profit = self.mid
         return long_entry, long_stop, long_take_profit
 
     def start_new_sideway_period(self):
         self.sideways_orders.append([])
 
-    def place_short_order(self, high, low, mid):
+    def place_short_order(self):
         entry_price, stop_price, take_profit_price = (
-            self.get_short_order_params(high, low, mid)
+            self.get_short_order_params()
         )
-        order = Order("short", entry_price, stop_price, take_profit_price, high, low, mid)
+        order = Order("short", entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
-    def place_long_order(self, high, low, mid):
+    def place_long_order(self):
         entry_price, stop_price, take_profit_price = (
-            self.get_long_order_params(high, low, mid)
+            self.get_long_order_params()
         )
-        order = Order("long", entry_price, stop_price, take_profit_price, high, low, mid)
+        order = Order("long", entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
@@ -218,9 +221,9 @@ class Trader:
         for order in self.current_sideway_orders:
             if order.closed_by_take_profit and len(self.get_current_closed_orders) < 2 and len(self.current_open_or_fulfilled_orders) < 2:
                 if order.type == 'long':
-                    self.place_long_order(order.high, order.low, order.mid)
+                    self.place_long_order()
                 else:
-                    self.place_short_order(order.high, order.low, order.mid)
+                    self.place_short_order()
         
         if self.is_some_current_order_closed_by_stop() or len(self.get_current_closed_orders) >= 2:
             self.cancel_opened_orders_in_sideway()
