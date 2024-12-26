@@ -108,7 +108,6 @@ class Order:
 class Trader:
     def __init__(self):
         self.sideways_orders = []
-        self.current_sideway_orders = []
 
     @property
     def failed_orders_count(self):
@@ -150,8 +149,11 @@ class Trader:
         return long_entry, long_stop, long_take_profit
 
     def start_new_sideway_period(self):
-        self.current_sideway_orders = []
-        self.sideways_orders.append(self.current_sideway_orders)
+        self.sideways_orders.append([])
+
+    @property
+    def current_sideway_orders(self):
+        return self.sideways_orders[-1] if self.sideways_orders else []
 
     def place_short_order(self, high, low, mid):
         entry_price, stop_price, take_profit_price = (
