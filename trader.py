@@ -41,7 +41,15 @@ class Order:
 
     @property        
     def is_closed(self):
-        return self.status == OrderStatus.CLOSED and (self.close_price == self.stop_price or self.close_price == self.take_profit_price)
+        return self.closed_by_stop or self.closed_by_take_profit
+
+    @property        
+    def closed_by_stop(self):
+        return self.status == OrderStatus.CLOSED and self.close_price == self.stop_price 
+
+    @property        
+    def closed_by_take_profit(self):
+        return self.status == OrderStatus.CLOSED and self.close_price == self.take_profit_price
 
     def cancel(self):
         self.status = OrderStatus.CANCELED
