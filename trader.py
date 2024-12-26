@@ -38,7 +38,7 @@ class Order:
 
     @property        
     def is_closed(self):
-        return self.closed_by_stop or self.closed_by_take_profit
+        return self.status == OrderStatus.CLOSED
 
     @property        
     def closed_by_stop(self):
