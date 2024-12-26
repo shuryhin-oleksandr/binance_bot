@@ -179,7 +179,7 @@ class Trader:
     def is_current_orders_were_closed_by_sl(self):
         return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
 
-    def evaluate_orders(self, kline):
+    def manage_current_orders(self, kline):
         for order in self.current_sideway_orders:
             order.evaluate(kline)
             if order.status == OrderStatus.OPEN and self.is_current_orders_were_closed_by_sl():

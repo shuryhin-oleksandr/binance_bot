@@ -167,7 +167,7 @@ class Dispatcher:
 
             # the analyzer does not work while the trader is working
             if self.trader.has_uncompleted_order():
-                self.trader.evaluate_orders(current_kline)
+                self.trader.manage_current_orders(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
                 
@@ -210,7 +210,7 @@ class Dispatcher:
 
             # the analyzer does not work while the trader is working
             if self.trader.has_uncompleted_order():
-                self.trader.evaluate_orders(klines[-1])
+                self.trader.manage_current_orders(klines[-1])
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
