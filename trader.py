@@ -42,11 +42,10 @@ class Order:
 
     @property        
     def is_closed(self):
-        return self.closed_by_stop or self.closed_by_take_profit
+        return self.closed_by_stop(self) or self.closed_by_take_profit
 
-    @property        
-    def closed_by_stop(self):
-        return self.status == OrderStatus.CLOSED and self.close_price == self.stop_price 
+    def closed_by_stop(self, order):
+        return order.status == OrderStatus.CLOSED and order.close_price == order.stop_price
 
     @property        
     def closed_by_take_profit(self):
@@ -203,7 +202,7 @@ class Trader:
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
 
     def is_some_current_order_closed_by_stop(self):
-        return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
+        return any([order for order in self.current_sideway_orders if self.closed_by_stop(order)])
 
     def update_orders(self, kline):
         for order in self.current_sideway_orders:
