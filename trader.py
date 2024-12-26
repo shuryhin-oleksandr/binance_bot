@@ -1,3 +1,4 @@
+from itertools import chain
 from enum import Enum
 from utils import logger, convert_unix_full_date_str
 
@@ -121,12 +122,16 @@ class Trader:
         self.sideways_orders = []
 
     @property
+    def flat_orders(self):
+        return list(chain.from_iterable(self.sideways_orders))
+
+    @property
     def failed_orders_count(self):
-        return len([order for sideway_orders in self.sideways_orders for order in sideway_orders if order.profit < 0])
+        return len([order for order in self.flat_orders if order.profit < 0])
 
     @property
     def successful_orders_count(self):
-        return len([order for sideway_orders in self.sideways_orders for order in sideway_orders if order.profit > 0])
+        return len([order for order in self.flat_orders if order.profit > 0])
 
     @property
     def total_orders(self):
