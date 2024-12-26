@@ -194,12 +194,13 @@ class Trader:
         self.current_sideway_orders.append(order)
         return order
 
+    @property
     def get_current_closed_orders(self):
         return [order for order in self.current_sideway_orders if order.is_closed]
-        
+
     def get_current_pending_orders(self):
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
-        
+
     def is_current_orders_were_closed_by_sl(self):
         return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
 
@@ -212,11 +213,11 @@ class Trader:
                 order.cancel()
                 order.log_order_closed()
             
-            if len(self.get_current_closed_orders()) >= 2 and order.status == OrderStatus.OPEN:
+            if len(self.get_current_closed_orders) >= 2 and order.status == OrderStatus.OPEN:
                 order.cancel()
                 order.log_order_closed()
 
-            if order.status == OrderStatus.CLOSED and order.close_price == order.take_profit_price and len(self.get_current_closed_orders()) < 2 and len(self.get_current_pending_orders()) < 2:
+            if order.status == OrderStatus.CLOSED and order.close_price == order.take_profit_price and len(self.get_current_closed_orders) < 2 and len(self.get_current_pending_orders()) < 2:
                 if order.type == 'long':
                     self.place_long_order(order.high, order.low, order.mid)
                 else:
