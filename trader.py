@@ -202,7 +202,7 @@ class Trader:
     def current_open_or_fulfilled_orders(self):
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
 
-    def is_current_orders_were_closed_by_sl(self):
+    def is_some_current_order_closed_by_stop(self):
         return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
 
     def update_orders(self, kline):
@@ -210,7 +210,7 @@ class Trader:
             order.evaluate(kline)
 
         for order in self.current_sideway_orders:
-            if order.status == OrderStatus.OPEN and self.is_current_orders_were_closed_by_sl():
+            if order.status == OrderStatus.OPEN and self.is_some_current_order_closed_by_stop():
                 order.cancel()
                 order.log_order_closed()
             
