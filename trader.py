@@ -202,7 +202,7 @@ class Trader:
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
 
     def is_some_current_order_closed_by_stop(self):
-        return any([order for order in self.current_sideway_orders if self.closed_by_stop(order)])
+        return any([order for order in self.current_sideway_orders if order.closed_by_stop(order)])
 
     def update_orders(self, kline):
         for order in self.current_sideway_orders:
