@@ -129,6 +129,17 @@ class Trader:
                 profit += order.profit
         return profit
 
+    @property
+    def current_sideway_orders(self):
+        return self.sideways_orders[-1] if self.sideways_orders else []
+    
+    def add_subway(self, high, low, mid):
+        self.start_new_sideway_period()
+
+        short_order = self.place_short_order(high, low, mid)
+        long_order = self.place_long_order(high, low, mid)
+        return short_order, long_order
+
     def get_sideway_height_deviation(self, high, low):
         sideway_height = (high / low) - 1
         deviation = 0.05 * sideway_height
@@ -150,10 +161,6 @@ class Trader:
 
     def start_new_sideway_period(self):
         self.sideways_orders.append([])
-
-    @property
-    def current_sideway_orders(self):
-        return self.sideways_orders[-1] if self.sideways_orders else []
 
     def place_short_order(self, high, low, mid):
         entry_price, stop_price, take_profit_price = (
