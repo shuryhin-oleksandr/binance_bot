@@ -109,7 +109,6 @@ class Trader:
     def __init__(self):
         self.sideways_orders = []
         self.current_sideway_orders = []
-        self.successful_sideway_orders = 0
 
     @property
     def failed_orders_count(self):
@@ -197,16 +196,6 @@ class Trader:
                     self.place_long_order(order.high, order.low, order.mid)
                 else:
                     self.place_short_order(order.high, order.low, order.mid)
-
-    def cancel_opposite_order(self, closed_order):
-        last_short_order = self.current_sideway_orders[-2]
-        last_long_order = self.current_sideway_orders[-1]
-        if last_long_order == closed_order and not last_short_order.status == OrderStatus.CANCELED:
-            last_short_order.cancel()
-            last_short_order.log_order_closed()
-        elif last_short_order == closed_order and not last_long_order.status == OrderStatus.CANCELED:
-            last_long_order.cancel()
-            last_long_order.log_order_closed()
 
     def log_order_summary(self):
         logger.info(
