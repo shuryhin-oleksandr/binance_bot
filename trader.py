@@ -40,7 +40,7 @@ class Order:
         self.close_price = price
 
     @property        
-    def is_close(self):
+    def is_closed(self):
         return self.status == OrderStatus.CLOSED and (self.close_price == self.stop_price or self.close_price == self.take_profit_price)
 
     def cancel(self):
@@ -176,7 +176,7 @@ class Trader:
         return order
 
     def get_current_closed_orders(self):
-        return [order for order in self.current_sideway_orders if order.is_close]
+        return [order for order in self.current_sideway_orders if order.is_closed]
         
     def get_current_pending_orders(self):
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
