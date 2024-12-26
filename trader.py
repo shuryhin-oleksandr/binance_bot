@@ -99,14 +99,20 @@ class Order:
             f"Order fulfilled: {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
         )
 
+    @property
+    def entry_time_str(self):
+        return convert_unix_full_date_str(self.entry_time) if self.entry_time else "N/A"
+
+    @property
+    def close_time_str(self):
+        return convert_unix_full_date_str(self.entry_time) if self.entry_time else "N/A"
+
     def log_order_closed(self):
         order_info = self.get_info()
-        entry_time_str = convert_unix_full_date_str(self.entry_time) if self.entry_time else "N/A"
-        close_time_str = convert_unix_full_date_str(self.close_time) if self.close_time else "N/A"
         status = "closed" if self.close_time and self.entry_time else "canceled"
         logger.info(
-            f"Order {status}: Profit: {self.profit}, {order_info}, Entry Time: {entry_time_str}, "
-            f"Close Time: {close_time_str}"
+            f"Order {status}: Profit: {self.profit}, {order_info}, Entry Time: {self.entry_time_str}, "
+            f"Close Time: {self.close_time_str}"
         )
 
 
