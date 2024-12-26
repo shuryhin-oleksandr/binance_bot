@@ -28,7 +28,7 @@ class Order:
     @property
     def profit(self):
         order_investment = 1000  # USDT
-        if self.status == OrderStatus.CANCELED:
+        if self.status == OrderStatus.CANCELED or self.status == OrderStatus.OPEN:
             return 0
         if self.type == "long":
             return (self.close_price - self.entry_price) / self.entry_price * order_investment
