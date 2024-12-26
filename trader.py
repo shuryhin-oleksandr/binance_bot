@@ -20,7 +20,6 @@ class Order:
         self.entry_time = None
         self.close_price = None
 
-        self.additional_order = False
         self.high = high
         self.low = low
         self.mid = mid
