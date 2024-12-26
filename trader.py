@@ -42,10 +42,11 @@ class Order:
 
     @property        
     def is_closed(self):
-        return self.closed_by_stop(self) or self.closed_by_take_profit
+        return self.closed_by_stop or self.closed_by_take_profit
 
-    def closed_by_stop(self, order):
-        return order.status == OrderStatus.CLOSED and order.close_price == order.stop_price
+    @property        
+    def closed_by_stop(self):
+        return self.status == OrderStatus.CLOSED and self.close_price == self.stop_price
 
     @property        
     def closed_by_take_profit(self):
@@ -202,26 +203,27 @@ class Trader:
         return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
 
     def is_some_current_order_closed_by_stop(self):
-        return any([order for order in self.current_sideway_orders if order.closed_by_stop(order)])
+        return any([order for order in self.current_sideway_orders if order.closed_by_stop])
+
+    def cancel_opened_orders_in_sideway(self):
+        for order in self.current_sideway_orders:
+            if order.status == OrderStatus.OPEN:
+                order.cancel()
+                order.log_order_closed()
 
     def update_orders(self, kline):
         for order in self.current_sideway_orders:
             order.evaluate(kline)
 
         for order in self.current_sideway_orders:
-            if order.status == OrderStatus.OPEN and self.is_some_current_order_closed_by_stop():
-                order.cancel()
-                order.log_order_closed()
-            
-            if len(self.get_current_closed_orders) >= 2 and order.status == OrderStatus.OPEN:
-                order.cancel()
-                order.log_order_closed()
-
-            if order.status == OrderStatus.CLOSED and order.close_price == order.take_profit_price and len(self.get_current_closed_orders) < 2 and len(self.current_open_or_fulfilled_orders) < 2:
+            if order.closed_by_take_profit and len(self.get_current_closed_orders) < 2 and len(self.current_open_or_fulfilled_orders) < 2:
                 if order.type == 'long':
                     self.place_long_order(order.high, order.low, order.mid)
                 else:
                     self.place_short_order(order.high, order.low, order.mid)
+        
+        if self.is_some_current_order_closed_by_stop() or len(self.get_current_closed_orders) >= 2:
+            self.cancel_opened_orders_in_sideway()
 
     def log_order_summary(self):
         logger.info(
