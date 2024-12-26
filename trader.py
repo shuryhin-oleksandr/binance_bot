@@ -42,6 +42,10 @@ class Order:
         self.close_time = time
         self.close_price = price
 
+    @property        
+    def is_close(self):
+        return self.status == OrderStatus.CLOSED and (self.close_price == self.stop_price or self.close_price == self.take_profit_price)
+
     def cancel(self):
         self.status = OrderStatus.CANCELED
         self.close_time = None
@@ -104,25 +108,27 @@ class Order:
 class Trader:
     def __init__(self):
         self.orders = []
+        self.current_sideway_orders = []
         self.successful_sideway_orders = 0
 
     @property
     def failed_orders_count(self):
-        return len([order for order in self.orders if order.profit < 0])
+        return len([order for sideway_orders in self.orders for order in sideway_orders if order.profit < 0])
 
     @property
     def successful_orders_count(self):
-        return len([order for order in self.orders if order.profit > 0])
+        return len([order for sideway_orders in self.orders for order in sideway_orders if order.profit > 0])
 
     @property
     def total_orders(self):
-        return len(self.orders)
+        return sum(len(sideway_orders) for sideway_orders in self.orders)
 
     @property
     def total_profit(self):
         profit = 0
-        for order in self.orders:
-            profit += order.profit
+        for sideway_orders in self.orders:
+            for order in sideway_orders:
+                profit += order.profit
         return profit
 
     def get_sideway_height_deviation(self, high, low):
@@ -144,12 +150,16 @@ class Trader:
         long_take_profit = mid
         return long_entry, long_stop, long_take_profit
 
+    def start_new_sideway_period(self):
+        self.current_sideway_orders = []
+        self.orders.append(self.current_sideway_orders)
+
     def place_short_order(self, high, low, mid):
         entry_price, stop_price, take_profit_price = (
             self.get_short_order_params(high, low, mid)
         )
         order = Order("short", entry_price, stop_price, take_profit_price, high, low, mid)
-        self.orders.append(order)
+        self.current_sideway_orders.append(order)
         return order
 
     def place_long_order(self, high, low, mid):
@@ -157,18 +167,38 @@ class Trader:
             self.get_long_order_params(high, low, mid)
         )
         order = Order("long", entry_price, stop_price, take_profit_price, high, low, mid)
-        self.orders.append(order)
+        self.current_sideway_orders.append(order)
         return order
 
+    def get_current_closed_orders(self):
+        return [order for order in self.current_sideway_orders if order.is_close]
+        
+    def get_current_pending_orders(self):
+        return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
+        
+    def is_current_orders_were_closed_by_sl(self):
+        return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
+
     def evaluate_orders(self, kline):
-        for order in self.orders:
+        for order in self.current_sideway_orders:
             order.evaluate(kline)
-            if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price:
-                self.cancel_opposite_order(order)
+            if order.status == OrderStatus.OPEN and self.is_current_orders_were_closed_by_sl():
+                order.cancel()
+                order.log_order_closed()
+            
+            if len(self.get_current_closed_orders()) >= 2 and order.status == OrderStatus.OPEN:
+                order.cancel()
+                order.log_order_closed()
+
+            if order.status == OrderStatus.CLOSED and order.close_price == order.take_profit_price and len(self.get_current_closed_orders()) < 2 and len(self.get_current_pending_orders()) < 2:
+                if order.order_type == 'long':
+                    self.place_long_order(order.high, order.low, order.mid)
+                else:
+                    self.place_short_order(order.high, order.low, order.mid)
 
     def cancel_opposite_order(self, closed_order):
-        last_short_order = self.orders[-2]
-        last_long_order = self.orders[-1]
+        last_short_order = self.current_sideway_orders[-2]
+        last_long_order = self.current_sideway_orders[-1]
         if last_long_order == closed_order and not last_short_order.status == OrderStatus.CANCELED:
             last_short_order.cancel()
             last_short_order.log_order_closed()
@@ -183,6 +213,8 @@ class Trader:
         )
 
     def has_uncompleted_order(self):
+        if not self.current_sideway_orders:
+            return False
         return any(
-            order.status in {OrderStatus.OPEN, OrderStatus.FULFILLED} for order in self.orders
+            order.status in {OrderStatus.OPEN, OrderStatus.FULFILLED} for order in self.current_sideway_orders
         )
