@@ -86,7 +86,7 @@ class Order:
                     self.log_order_closed()
 
     def get_info(self):
-        return f"Type: {self.order_type}, Entry Price: {self.entry_price}, Stop Price: {self.stop_price}, Take Profit: {self.take_profit_price}"
+        return f"(entry: {self.entry_price}, stop: {self.stop_price}, take: {self.take_profit_price})"
 
     def log_order_fulfilled(self):
         order_info = self.get_info()
@@ -107,26 +107,26 @@ class Order:
 
 class Trader:
     def __init__(self):
-        self.orders = []
+        self.sideways_orders = []
         self.current_sideway_orders = []
         self.successful_sideway_orders = 0
 
     @property
     def failed_orders_count(self):
-        return len([order for sideway_orders in self.orders for order in sideway_orders if order.profit < 0])
+        return len([order for sideway_orders in self.sideways_orders for order in sideway_orders if order.profit < 0])
 
     @property
     def successful_orders_count(self):
-        return len([order for sideway_orders in self.orders for order in sideway_orders if order.profit > 0])
+        return len([order for sideway_orders in self.sideways_orders for order in sideway_orders if order.profit > 0])
 
     @property
     def total_orders(self):
-        return sum(len(sideway_orders) for sideway_orders in self.orders)
+        return sum(len(sideway_orders) for sideway_orders in self.sideways_orders)
 
     @property
     def total_profit(self):
         profit = 0
-        for sideway_orders in self.orders:
+        for sideway_orders in self.sideways_orders:
             for order in sideway_orders:
                 profit += order.profit
         return profit
@@ -152,7 +152,7 @@ class Trader:
 
     def start_new_sideway_period(self):
         self.current_sideway_orders = []
-        self.orders.append(self.current_sideway_orders)
+        self.sideways_orders.append(self.current_sideway_orders)
 
     def place_short_order(self, high, low, mid):
         entry_price, stop_price, take_profit_price = (
@@ -179,9 +179,11 @@ class Trader:
     def is_current_orders_were_closed_by_sl(self):
         return any([order for order in self.current_sideway_orders if order.status == OrderStatus.CLOSED and order.close_price == order.stop_price])
 
-    def manage_current_orders(self, kline):
+    def update_orders(self, kline):
         for order in self.current_sideway_orders:
             order.evaluate(kline)
+
+        for order in self.current_sideway_orders:
             if order.status == OrderStatus.OPEN and self.is_current_orders_were_closed_by_sl():
                 order.cancel()
                 order.log_order_closed()
