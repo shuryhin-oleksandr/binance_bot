@@ -212,7 +212,7 @@ class Trader:
             f"Negative={self.failed_orders_count}, Net profit/loss={self.total_profit:.2f}"
         )
 
-    def has_uncompleted_order(self):
+    def has_traded_sideway(self):
         if not self.current_sideway_orders:
             return False
         return any(

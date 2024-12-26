@@ -166,7 +166,7 @@ class Dispatcher:
             current_kline = klines[index]
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_order():
+            if self.trader.has_traded_sideway():
                 self.trader.update_orders(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
@@ -202,7 +202,7 @@ class Dispatcher:
             )
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_order():
+            if self.trader.has_traded_sideway():
                 self.trader.update_orders(klines[-1])
                 continue
 
