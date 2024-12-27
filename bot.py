@@ -166,29 +166,19 @@ class Dispatcher:
             current_kline = klines[index]
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_trade():
-                self.trader.evaluate_trades(current_kline)
+            if self.trader.has_active_sideway():
+                self.trader.update_orders(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
-                orders.append(
-                    self.trader.place_short_trade(
-                        self.analyzer.high_kline["high"],
-                        self.analyzer.low_kline["low"],
-                        self.analyzer.mid_kline["high"],
-                    )
+                sideway_orders = self.trader.add_sideway(
+                    self.analyzer.high_kline["high"],
+                    self.analyzer.low_kline["low"]
                 )
-                orders.append(
-                    self.trader.place_long_trade(
-                        self.analyzer.high_kline["high"],
-                        self.analyzer.low_kline["low"],
-                        self.analyzer.mid_kline["high"],
-                    )
-                )
-
+                orders.extend(sideway_orders)
                 self.analyzer.reset_klines()
 
             analyzed_klines.append(analyzed_kline)
@@ -196,7 +186,7 @@ class Dispatcher:
         return analyzed_klines, orders
 
     def summarize_trader_results(self):
-        self.trader.log_trade_summary()
+        self.trader.log_order_summary()
 
     def real_time_monitoring(self):
         while True:
@@ -209,18 +199,19 @@ class Dispatcher:
             )
 
             # the analyzer does not work while the trader is working
-            if self.trader.has_uncompleted_trade():
-                self.trader.evaluate_trades(klines[-1])
+            if self.trader.has_active_sideway():
+                self.trader.update_orders(klines[-1])
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
-                self.trader.place_short_trade(
+                self.trader.new_orders_in_sideway = True
+                self.trader.place_short_order(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"],
                     self.analyzer.mid_kline["high"],
                 )
-                self.trader.place_long_trade(
+                self.trader.place_long_order(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"],
                     self.analyzer.mid_kline["high"],
