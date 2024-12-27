@@ -150,7 +150,7 @@ class Trader:
         return self.sideways_orders[-1] if self.sideways_orders else []
     
     def add_subway(self, high, low, mid):
-        self.start_new_sideway_period()
+        self.sideways_orders.append([])
 
         self.high = high
         self.low = low
@@ -178,9 +178,6 @@ class Trader:
         long_stop = self.low * (1 - sideway_height / 2)
         long_take_profit = self.mid
         return long_entry, long_stop, long_take_profit
-
-    def start_new_sideway_period(self):
-        self.sideways_orders.append([])
 
     def place_short_order(self):
         entry_price, stop_price, take_profit_price = (
