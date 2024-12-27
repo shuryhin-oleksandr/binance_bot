@@ -177,8 +177,7 @@ class Dispatcher:
                 # Start a new sideway period
                 subway_orders = self.trader.add_subway(
                     self.analyzer.high_kline["high"],
-                    self.analyzer.low_kline["low"],
-                    self.analyzer.mid_kline["high"],
+                    self.analyzer.low_kline["low"]
                 )
                 orders.extend(subway_orders)
                 self.analyzer.reset_klines()
