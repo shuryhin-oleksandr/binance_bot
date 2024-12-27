@@ -53,6 +53,18 @@ def parse_date(date_str):
         return datetime.strptime(date_str, "%Y-%m-%d")
 
 
+def determine_analysis_start_time(analysis_end_time, time_window, coin):
+    from binance_api import get_klines
+
+    binance_foundation_date = get_unix_timestamp(datetime.strptime("2017-07-01", "%Y-%m-%d"))
+    klines = get_klines(binance_foundation_date, analysis_end_time, coin)
+    return int(klines[0][0]) + time_window * 60 * 60 * 1000
+
+
+def serialize_object(obj):
+    return obj.__dict__  if hasattr(obj, "__dict__") else str(obj)
+
+
 def get_unix_timestamp(date):
     return int(date.timestamp() * 1000)
 
@@ -69,21 +81,25 @@ def get_kline_time(kline):
 
 
 def log_middle_kline(kline):
-    logger.info(f"Middle kline: {get_kline_time(kline)}, High price: {kline['high']}")
+    logger.debug(f"Middle kline: {get_kline_time(kline)}, High price: {kline['high']}")
 
 
 def log_high_kline(kline):
     if 'target_price_growth_percent' in kline is not None:
-        logger.info(
+        logger.debug(
             f"New impulse. High kline: (the price increased by {kline['target_price_growth_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
         )
     else:
-        logger.info(
+        logger.debug(
             f"High kline: {get_kline_time(kline)}, High price: {kline['high']}"
         )
 
 
 def log_low_kline(kline):
-    logger.info(
-        f"Low kline: (the price has dropped by {kline['target_price_drop_percent']}%) {get_kline_time(kline)}, High price: {kline['high']}"
+    logger.debug(
+        f"Low kline: (the price has dropped by {kline['target_price_drop_percent']}%) {get_kline_time(kline)}, Low price: {kline['low']}"
     )
+
+
+def log_sideway(high_kline, low_kline, mid_kline, mid_price):
+    logger.info(f"Sideway, High price: {high_kline['high']}, Low price: {low_kline['low']}, Mid price: {mid_price}, Time: {convert_unix_full_date_str(mid_kline['closeTime'])}")
