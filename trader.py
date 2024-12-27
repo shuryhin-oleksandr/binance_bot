@@ -195,11 +195,13 @@ class Trader:
 
     @property
     def get_current_closed_orders(self):
-        return [order for order in self.current_sideway_orders if order.closed_by_stop or order.closed_by_take_profit]
+        is_closed = lambda order: order.closed_by_stop or order.closed_by_take_profit
+        return list(filter(is_closed, self.current_sideway_orders))
 
     @property
     def current_open_or_fulfilled_orders(self):
-        return [order for order in self.current_sideway_orders if order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED]
+        is_open_or_fulfilled = lambda order: order.status == OrderStatus.OPEN or order.status == OrderStatus.FULFILLED
+        return list(filter(is_open_or_fulfilled, self.current_sideway_orders))
 
     def is_some_current_order_closed_by_stop(self):
         return any([order for order in self.current_sideway_orders if order.closed_by_stop])
