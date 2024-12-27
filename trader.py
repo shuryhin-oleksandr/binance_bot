@@ -134,7 +134,7 @@ class Trader:
         return len([order for order in self.flat_orders if order.profit > 0])
 
     @property
-    def total_orders(self):
+    def total_orders_count(self):
         return sum(len(sideway_orders) for sideway_orders in self.sideways_orders)
 
     @property
@@ -231,7 +231,7 @@ class Trader:
 
     def log_order_summary(self):
         logger.info(
-            f"Order summary: Total={self.total_orders}, Positive={self.successful_orders_count}, "
+            f"Order summary: Total={self.total_orders_count}, Positive={self.successful_orders_count}, "
             f"Negative={self.failed_orders_count}, Net profit/loss={self.total_profit:.2f}"
         )
 
