@@ -148,7 +148,7 @@ class Trader:
     def current_sideway_orders(self):
         return self.sideways_orders[-1] if self.sideways_orders else []
     
-    def add_subway(self, high, low):
+    def add_sideway(self, high, low):
         self.sideways_orders.append([])
 
         self.high = high
