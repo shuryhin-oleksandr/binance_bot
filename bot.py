@@ -175,11 +175,11 @@ class Dispatcher:
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)
             if analyzed_kline["status"] == "mid":
                 # Start a new sideway period
-                subway_orders = self.trader.add_subway(
+                sideway_orders = self.trader.add_subway(
                     self.analyzer.high_kline["high"],
                     self.analyzer.low_kline["low"]
                 )
-                orders.extend(subway_orders)
+                orders.extend(sideway_orders)
                 self.analyzer.reset_klines()
 
             analyzed_klines.append(analyzed_kline)
