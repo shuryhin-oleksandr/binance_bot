@@ -133,8 +133,18 @@ class Trader:
         return len([order for order in self.flat_orders if order.profit > 0])
 
     @property
-    def total_orders_count(self):
-        return sum(len(sideway_orders) for sideway_orders in self.sideways_orders)
+    def total_closed_orders_count(self):
+        return sum(len(sideway_orders) for sideway_orders in self.sideways_orders) - self.canceled_orders_count - self.opened_orders_count
+
+    @property
+    def canceled_orders_count(self):
+        is_canceled = lambda order: order.status == OrderStatus.CANCELED
+        return len(list(filter(is_canceled, self.flat_orders)))
+
+    @property
+    def opened_orders_count(self):
+        is_open = lambda order: order.status == OrderStatus.OPEN
+        return len(list(filter(is_open, self.flat_orders)))
 
     @property
     def total_profit(self):
@@ -229,7 +239,7 @@ class Trader:
 
     def log_order_summary(self):
         logger.info(
-            f"Order summary: Total={self.total_orders_count}, Positive={self.successful_orders_count}, "
+            f"Order summary: Total={self.total_closed_orders_count}, Positive={self.successful_orders_count}, "
             f"Negative={self.failed_orders_count}, Net profit/loss={self.total_profit:.2f}"
         )
 
