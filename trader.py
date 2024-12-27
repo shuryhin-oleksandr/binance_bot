@@ -223,7 +223,8 @@ class Trader:
                 else:
                     self.place_short_order()
         
-        if self.is_some_current_order_closed_by_stop() or len(self.get_current_closed_orders) >= 2:
+        cancel_orders_condition = self.is_some_current_order_closed_by_stop() or len(self.get_current_closed_orders) >= 2
+        if cancel_orders_condition:
             self.cancel_opened_orders_in_sideway()
 
     def log_order_summary(self):
