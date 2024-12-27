@@ -109,7 +109,7 @@ class Order:
         order_info = self.get_info()
         status = "closed" if self.close_time and self.entry_time else "canceled"
         logger.info(
-            f"{self.type.capitalize()} order {status}: Profit: {self.profit}, {order_info}, Entry Time: {self.entry_time_str}, "
+            f"{self.type.value.capitalize()} order {status}: Profit: {self.profit}, {order_info}, Entry Time: {self.entry_time_str}, "
             f"Close Time: {self.close_time_str}"
         )
 
@@ -181,7 +181,7 @@ class Trader:
         entry_price, stop_price, take_profit_price = (
             self.get_short_order_params()
         )
-        order = Order("short", entry_price, stop_price, take_profit_price)
+        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
@@ -189,7 +189,7 @@ class Trader:
         entry_price, stop_price, take_profit_price = (
             self.get_long_order_params()
         )
-        order = Order("long", entry_price, stop_price, take_profit_price)
+        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
