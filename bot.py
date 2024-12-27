@@ -170,7 +170,6 @@ class Dispatcher:
                 self.trader.update_orders(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
-                
                 continue
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, index)

@@ -10,6 +10,11 @@ class OrderStatus(Enum):
     CANCELED = "canceled"
 
 
+class OrderType(Enum):
+    LONG = "long"
+    SHORT = "short"
+
+
 class Order:
     def __init__(self, type, entry_price, stop_price, take_profit_price):
         self.type = type  # 'short' or 'long'
@@ -26,7 +31,7 @@ class Order:
         order_investment = 1000  # USDT
         if self.status == OrderStatus.CANCELED or self.status == OrderStatus.OPEN:
             return 0
-        if self.type == "long":
+        if self.type == OrderType.LONG:
             return (self.close_price - self.entry_price) / self.entry_price * order_investment
         # if the order type is short, then the the selling price is entry_price and the buying price is close_price
         return (self.entry_price - self.close_price) / self.close_price * order_investment
@@ -63,15 +68,15 @@ class Order:
         time = kline["closeTime"]
 
         if self.status == OrderStatus.OPEN:
-            is_long_fulfilled = self.type == "long" and low_price <= self.entry_price
-            is_short_fulfilled = self.type == "short" and high_price >= self.entry_price
+            is_long_fulfilled = self.type == OrderType.LONG and low_price <= self.entry_price
+            is_short_fulfilled = self.type == OrderType.SHORT and high_price >= self.entry_price
 
             if is_long_fulfilled or is_short_fulfilled:
                 self.fullfill(time)
                 self.log_order_fulfilled()
 
         elif self.status == OrderStatus.FULFILLED:
-            if self.type == "short":
+            if self.type == OrderType.SHORT:
                 if low_price <= self.take_profit_price:
                     self.close(time, self.take_profit_price)
                     self.log_order_closed()
@@ -79,7 +84,7 @@ class Order:
                     self.close(time, self.stop_price)
                     self.log_order_closed()
 
-            elif self.type == "long":
+            elif self.type == OrderType.LONG:
                 if high_price >= self.take_profit_price:
                     self.close(time, self.take_profit_price)
                     self.log_order_closed()
@@ -220,7 +225,7 @@ class Trader:
 
         for order in self.current_sideway_orders:
             if order.closed_by_take_profit and len(self.get_current_closed_orders) < 2 and len(self.current_open_or_fulfilled_orders) < 2:
-                if order.type == 'long':
+                if order.type == OrderType.LONG:
                     self.place_long_order()
                 else:
                     self.place_short_order()
