@@ -1,6 +1,6 @@
 import json
 import argparse
-from graphic import Graphic
+from src.graphic import Graphic
 
 def create_graph(json_file):
     graphic = Graphic()

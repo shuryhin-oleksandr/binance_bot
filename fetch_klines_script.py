@@ -1,6 +1,6 @@
 import argparse
 import time
-from kline_manager import KlineManager
+from src.kline_manager import KlineManager
 from utils import get_unix_timestamp, parse_date
 from bot import MONGO_URL, DB_NAME
 
