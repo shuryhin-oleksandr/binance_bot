@@ -4,7 +4,7 @@ import time
 import json
 from datetime import datetime
 from draw_graph import create_graph
-from trader import Trader
+from src.trader import Trader
 from utils import (
     get_unix_timestamp,
     determine_analysis_start_time,
