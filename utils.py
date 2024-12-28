@@ -54,7 +54,7 @@ def parse_date(date_str):
 
 
 def determine_analysis_start_time(analysis_end_time, time_window, coin):
-    from binance_api import get_klines
+    from binance_client import get_klines
 
     binance_foundation_date = get_unix_timestamp(datetime.strptime("2017-07-01", "%Y-%m-%d"))
     klines = get_klines(binance_foundation_date, analysis_end_time, coin)
