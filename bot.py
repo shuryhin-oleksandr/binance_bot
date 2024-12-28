@@ -296,7 +296,7 @@ def main():
 
     args = parser.parse_args()
 
-    from manager import KlineManager
+    from kline_manager import KlineManager
 
     kline_manager = KlineManager(MONGO_URL, DB_NAME, args.coin_symbol)
     analyzer = PriceAnalyzer(
