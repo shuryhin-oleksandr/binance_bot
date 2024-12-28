@@ -21,7 +21,7 @@ from utils import (
 TIME_STEP = 1 * 60 * 1000  # one minute in unix
 MONGO_URL = "mongodb://localhost:27017/"
 DB_NAME = "crypto_data"
-DEVIATION = 0.05
+DEVIATION = 0.04
 OUTPUT_DIRECTORY = "analyzed_data"
 
 
