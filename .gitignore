@@ -2,7 +2,9 @@
 *.log
 *.json
 logs/
-processed_klines/
 .env
 .idea/
 .vscode
+
+analyzed_data/
+processed_klines/
