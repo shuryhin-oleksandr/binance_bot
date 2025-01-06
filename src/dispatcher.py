@@ -2,8 +2,6 @@ import time
 from datetime import datetime
 
 
-
-
 class Dispatcher:
     def __init__(self, analyzer, trader, kline_manager):
         self.analyzer = analyzer
@@ -16,6 +14,7 @@ class Dispatcher:
 
     def run_for_historical_data(self):
         from bot import prepare_kline_plot_data
+
         # Fetch all klines for the analysis period
         klines = self.kline_manager.find_or_fetch_klines_in_range(
             self.analysis_start_time - self.analyzer.time_window,  # Start time with buffer for analysis
