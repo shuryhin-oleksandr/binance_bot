@@ -176,14 +176,14 @@ class Trader:
     def get_short_order_params(self):
         deviation, sideway_height = self.get_sideway_height_deviation()
         short_entry = self.high * (1 + deviation)
-        short_stop = self.high * (1 + sideway_height / 2)
+        short_stop = self.high * (1 + sideway_height / 2) * (1 - deviation)
         short_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
         return short_entry, short_stop, short_take_profit
 
     def get_long_order_params(self):
         deviation, sideway_height = self.get_sideway_height_deviation()
         long_entry = self.low * (1 - deviation)
-        long_stop = self.low * (1 - sideway_height / 2)
+        long_stop = self.low * (1 - sideway_height / 2) * (1 + deviation)
         long_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
         return long_entry, long_stop, long_take_profit
 
@@ -256,14 +256,15 @@ class Trader:
         long_averaging_price = (self.low - sideway_half_price) * (1 + deviation)
         if short_averaging_price <= high_price:
             # change tp in existing short order
-            current_opened_short_orders[0].take_profit_price = self.high * (1 + deviation)
+            short_averaging_take_profit = self.high * (1 + deviation)
+            current_opened_short_orders[0].take_profit_price = short_averaging_take_profit
             # cancel long existing orders
             for long_opened_order in current_opened_long_orders:
                 long_opened_order.cancel()
                 long_opened_order.log_order_closed()
             # open short order
             short_stop = current_opened_short_orders[0].stop_price
-            self.place_short_order(short_averaging_price, short_stop, self.high * (1 + deviation))
+            self.place_short_order(short_averaging_price, short_stop, short_averaging_take_profit)
             order_info = self.get_info()
             logger.info(
                 f"Averaging short order entry: {order_info}"
@@ -271,14 +272,15 @@ class Trader:
             
         if long_averaging_price >= low_price:
             # change tp in existing long order
-            current_opened_long_orders[0].take_profit_price = self.low * (1 - deviation)
+            long_averaging_take_profit = self.high * (1 - deviation)
+            current_opened_long_orders[0].take_profit_price = long_averaging_take_profit
             # cancel short orders
             for short_opened_order in current_opened_short_orders:
                 short_opened_order.cancel()
                 short_opened_order.log_order_closed()
             # open long order
             long_stop = current_opened_long_orders[0].stop_price
-            self.place_long_order(long_averaging_price, long_stop, self.low * (1 - deviation))
+            self.place_long_order(long_averaging_price, long_stop, long_averaging_take_profit)
             order_info = self.get_info()
             logger.info(
                 f"Averaging long order entry: {order_info}"
