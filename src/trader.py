@@ -148,6 +148,16 @@ class Trader:
     def current_sideway_orders(self):
         return self.sideways_orders[-1] if self.sideways_orders else []
     
+    @property
+    def current_long_orders(self):
+        is_long = lambda order: order.type == OrderType.LONG
+        return list(filter(is_long, self.current_open_or_fulfilled_orders))
+    
+    @property
+    def current_short_orders(self):
+        is_short = lambda order: order.type == OrderType.SHORT
+        return list(filter(is_short, self.current_open_or_fulfilled_orders))
+
     def add_sideway(self, high, low):
         self.sideways_orders.append([])
 
@@ -177,19 +187,23 @@ class Trader:
         long_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
         return long_entry, long_stop, long_take_profit
 
-    def place_short_order(self):
-        entry_price, stop_price, take_profit_price = (
-            self.get_short_order_params()
-        )
-        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price)
+    def place_short_order(self, entry_price=0, stop_price=0, take_profit_price=0):
+        _entry_price, _stop_price, _take_profit_price = entry_price, stop_price, take_profit_price
+        if not entry_price and not stop_price and not take_profit_price:
+            _entry_price, _stop_price, _take_profit_price = (
+                self.get_short_order_params()
+            )
+        order = Order(OrderType.SHORT, _entry_price, _stop_price, _take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
-    def place_long_order(self):
-        entry_price, stop_price, take_profit_price = (
-            self.get_long_order_params()
-        )
-        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price)
+    def place_long_order(self, entry_price=0, stop_price=0, take_profit_price=0):
+        _entry_price, _stop_price, _take_profit_price = entry_price, stop_price, take_profit_price
+        if not entry_price and not stop_price and not take_profit_price:
+            _entry_price, _stop_price, _take_profit_price = (
+                self.get_long_order_params()
+            )
+        order = Order(OrderType.LONG, _entry_price, _stop_price, _take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
@@ -226,6 +240,49 @@ class Trader:
         cancel_orders_condition = self.is_some_current_order_closed_by_stop() or len(self.get_current_closed_orders) >= 2
         if cancel_orders_condition:
             self.cancel_opened_orders_in_sideway()
+
+    def averaging_price(self, kline):
+        current_opened_long_orders, current_opened_short_orders = self.current_long_orders, self.current_short_orders
+        if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
+            return
+
+        sideway_half_price = self.high - self.low
+        deviation, _ = self.get_sideway_height_deviation()
+
+        low_price = kline["low"]
+        high_price = kline["high"]
+        
+        short_averaging_price = (self.high + sideway_half_price ) * (1 - deviation)
+        long_averaging_price = (self.low - sideway_half_price) * (1 + deviation)
+        if short_averaging_price <= high_price:
+            # change tp in existing short order
+            current_opened_short_orders[0].take_profit_price = self.high * (1 + deviation)
+            # cancel long existing orders
+            for long_opened_order in current_opened_long_orders:
+                long_opened_order.cancel()
+                long_opened_order.log_order_closed()
+            # open short order
+            short_stop = current_opened_short_orders[0].stop_price
+            self.place_short_order(short_averaging_price, short_stop, self.high * (1 + deviation))
+            order_info = self.get_info()
+            logger.info(
+                f"Averaging short order entry: {order_info}"
+            )
+            
+        if long_averaging_price >= low_price:
+            # change tp in existing long order
+            current_opened_long_orders[0].take_profit_price = self.low * (1 - deviation)
+            # cancel short orders
+            for short_opened_order in current_opened_short_orders:
+                short_opened_order.cancel()
+                short_opened_order.log_order_closed()
+            # open long order
+            long_stop = current_opened_long_orders[0].stop_price
+            self.place_long_order(long_averaging_price, long_stop, self.low * (1 - deviation))
+            order_info = self.get_info()
+            logger.info(
+                f"Averaging long order entry: {order_info}"
+            )
 
     def log_order_summary(self):
         logger.info(

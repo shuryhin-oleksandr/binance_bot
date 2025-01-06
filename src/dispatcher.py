@@ -30,6 +30,7 @@ class Dispatcher:
             # the analyzer does not work while the trader is working
             if self.trader.has_active_sideway():
                 self.trader.update_orders(current_kline)
+                self.trader.averaging_price(current_kline)
                 kline = prepare_kline_plot_data(current_kline)
                 analyzed_klines.append(kline)
                 continue
