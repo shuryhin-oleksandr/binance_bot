@@ -1,4 +1,3 @@
-from bot import TIME_STEP, DEVIATION, get_min_price
 from utils import log_high_kline, log_low_kline, log_middle_kline, log_sideway
 
 
@@ -9,6 +8,8 @@ class PriceAnalyzer:
         target_price_growth_percent,
         target_price_drop_percent,
     ):
+        from bot import TIME_STEP
+        
         self.time_window = time_window * 60 * 60 * 1000  # Convert hours to milliseconds
         self.target_price_growth_percent = target_price_growth_percent
         self.target_price_drop_percent = target_price_drop_percent
@@ -25,6 +26,8 @@ class PriceAnalyzer:
         return self.low_kline is None or self.low_kline["low"] > kline["low"]
 
     def calculate_middle_price(self):
+        from bot import DEVIATION
+        
         sideway_height = self.high_kline["high"] / self.low_kline["low"] - 1
         return self.low_kline["low"] * (1 + sideway_height * (0.5 - DEVIATION))
 
@@ -95,6 +98,8 @@ class PriceAnalyzer:
         return analyzed_kline
 
     def _analyze_snapshot(self, klines, snapshot_end):
+        from bot import get_min_price
+
         snapshot_start = snapshot_end - self.snapshot_klines_count
         min_price = get_min_price(klines, snapshot_start, snapshot_end)
         return self._analyze_kline(klines[snapshot_end], min_price)
