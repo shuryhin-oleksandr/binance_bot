@@ -254,13 +254,12 @@ class Trader:
         if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
             return
 
-        deviation, _ = self.get_sideway_height_deviation()
-
+        deviation, sideway_height = self.get_sideway_height_deviation()
         low_price = kline["low"]
         high_price = kline["high"]
         
-        short_averaging_price = (self.high + self.mid ) * (1 - deviation)
-        long_averaging_price = (self.low - self.mid) * (1 + deviation)
+        short_averaging_price = self.high * (1 + sideway_height / 2 + deviation)
+        long_averaging_price = self.low * (1 - sideway_height / 2 - deviation)
         if short_averaging_price <= high_price:
             # change tp in existing short order
             short_averaging_take_profit = self.high * (1 + deviation)
