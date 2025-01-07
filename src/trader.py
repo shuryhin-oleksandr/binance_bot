@@ -247,7 +247,7 @@ class Trader:
         if cancel_orders_condition:
             self.cancel_opened_orders_in_sideway()
 
-    def averaging_price(self, kline):
+    def calculate_and_place_averaging_order(self, kline):
         current_opened_long_orders, current_opened_short_orders = self.current_long_orders, self.current_short_orders
         if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
             return
