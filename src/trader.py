@@ -150,12 +150,12 @@ class Trader:
         return self.sideways_orders[-1] if self.sideways_orders else []
     
     @property
-    def current_long_orders(self):
+    def current_long_open_or_fulfilled_orders(self):
         is_long = lambda order: order.type == OrderType.LONG
         return list(filter(is_long, self.current_open_or_fulfilled_orders))
     
     @property
-    def current_short_orders(self):
+    def current_short_open_or_fulfilled__orders(self):
         is_short = lambda order: order.type == OrderType.SHORT
         return list(filter(is_short, self.current_open_or_fulfilled_orders))
 
@@ -250,7 +250,7 @@ class Trader:
             self.cancel_opened_orders_in_sideway()
 
     def calculate_and_place_averaging_order(self, kline):
-        current_opened_long_orders, current_opened_short_orders = self.current_long_orders, self.current_short_orders
+        current_opened_long_orders, current_opened_short_orders = self.current_long_open_or_fulfilled_orders, self.current_short_open_or_fulfilled__orders
         if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
             return
 
