@@ -119,6 +119,7 @@ class Trader:
         self.sideways_orders = []
         self.high = None
         self.low = None
+        self.mid = None
 
     @property
     def flat_orders(self):
@@ -163,6 +164,7 @@ class Trader:
 
         self.high = high
         self.low = low
+        self.mid = sqrt(high * low)
 
         short_order = self.place_short_order()
         long_order = self.place_long_order()
@@ -252,14 +254,13 @@ class Trader:
         if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
             return
 
-        sideway_half_price = self.high - self.low
         deviation, _ = self.get_sideway_height_deviation()
 
         low_price = kline["low"]
         high_price = kline["high"]
         
-        short_averaging_price = (self.high + sideway_half_price ) * (1 - deviation)
-        long_averaging_price = (self.low - sideway_half_price) * (1 + deviation)
+        short_averaging_price = (self.high + self.mid ) * (1 - deviation)
+        long_averaging_price = (self.low - self.mid) * (1 + deviation)
         if short_averaging_price <= high_price:
             # change tp in existing short order
             short_averaging_take_profit = self.high * (1 + deviation)
