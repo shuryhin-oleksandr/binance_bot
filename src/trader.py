@@ -94,7 +94,7 @@ class Order:
     def log_order_fulfilled(self):
         order_info = self.get_info()
         logger.info(
-            f"Order fulfilled: {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
+            f"{self.type.value.capitalize()} order fulfilled: {order_info}, Entry Time: {convert_unix_full_date_str(self.entry_time)}"
         )
 
     @property
@@ -270,8 +270,8 @@ class Trader:
                 long_opened_order.log_order_closed()
             # open short order
             short_stop = current_opened_short_orders[0].stop_price
-            self.place_short_order(short_averaging_price, short_stop, short_averaging_take_profit)
-            order_info = self.get_info()
+            short_order = self.place_short_order_with_params(short_averaging_price, short_stop, short_averaging_take_profit)
+            order_info = short_order.get_info()
             logger.info(
                 f"Averaging short order entry: {order_info}"
             )
@@ -286,8 +286,8 @@ class Trader:
                 short_opened_order.log_order_closed()
             # open long order
             long_stop = current_opened_long_orders[0].stop_price
-            self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
-            order_info = self.get_info()
+            long_order = self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
+            order_info = long_order.get_info()
             logger.info(
                 f"Averaging long order entry: {order_info}"
             )
