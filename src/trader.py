@@ -187,23 +187,29 @@ class Trader:
         long_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
         return long_entry, long_stop, long_take_profit
 
-    def place_short_order(self, entry_price=0, stop_price=0, take_profit_price=0):
-        _entry_price, _stop_price, _take_profit_price = entry_price, stop_price, take_profit_price
-        if not entry_price and not stop_price and not take_profit_price:
-            _entry_price, _stop_price, _take_profit_price = (
-                self.get_short_order_params()
-            )
-        order = Order(OrderType.SHORT, _entry_price, _stop_price, _take_profit_price)
+    def place_short_order(self):
+        entry_price, stop_price, take_profit_price = (
+            self.get_short_order_params()
+        )
+        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
-    def place_long_order(self, entry_price=0, stop_price=0, take_profit_price=0):
-        _entry_price, _stop_price, _take_profit_price = entry_price, stop_price, take_profit_price
-        if not entry_price and not stop_price and not take_profit_price:
-            _entry_price, _stop_price, _take_profit_price = (
-                self.get_long_order_params()
-            )
-        order = Order(OrderType.LONG, _entry_price, _stop_price, _take_profit_price)
+    def place_long_order(self):
+        entry_price, stop_price, take_profit_price = (
+            self.get_long_order_params()
+        )
+        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price)
+        self.current_sideway_orders.append(order)
+        return order
+
+    def place_short_order_with_params(self, entry_price, stop_price, take_profit_price):
+        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price)
+        self.current_sideway_orders.append(order)
+        return order
+
+    def place_long_order_with_params(self, entry_price, stop_price, take_profit_price):
+        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price)
         self.current_sideway_orders.append(order)
         return order
 
@@ -280,7 +286,7 @@ class Trader:
                 short_opened_order.log_order_closed()
             # open long order
             long_stop = current_opened_long_orders[0].stop_price
-            self.place_long_order(long_averaging_price, long_stop, long_averaging_take_profit)
+            self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
             order_info = self.get_info()
             logger.info(
                 f"Averaging long order entry: {order_info}"
