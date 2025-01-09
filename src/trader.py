@@ -170,9 +170,13 @@ class Trader:
 
         self.high = high
         self.low = low
+        self.short_average_order = None
+        self.long_average_order = None
 
         short_order = self.place_short_order()
         long_order = self.place_long_order()
+        
+        self.place_averaging_orders()
         return short_order, long_order
 
     def get_sideway_height_deviation(self):
@@ -254,18 +258,36 @@ class Trader:
         if cancel_orders_condition:
             self.cancel_opened_orders_in_sideway()
 
-    def calculate_and_place_averaging_order(self, kline):
-
-        if len(self.current_long_open_or_fulfilled_orders) != 1 or len(self.current_short_open_or_fulfilled__orders) != 1:
-            return
-
+    def place_averaging_orders(self):
         deviation, sideway_height = self.get_sideway_height_deviation()
-        low_price = kline["low"]
-        high_price = kline["high"]
         
+        # open short order
+        short_averaging_take_profit = self.high * (1 + deviation)
         short_averaging_price = self.high * (1 + sideway_height / 2 + deviation)
+        short_stop = self.current_short_open_or_fulfilled__orders[0].stop_price
+        short_order = self.place_short_order_with_params(short_averaging_price, short_stop, short_averaging_take_profit)
+        order_info = short_order.get_info()
+        logger.info(
+            f"Place averaging order: {order_info}"
+        )
+        self.short_average_order = short_order
+        
+        long_averaging_take_profit = self.high * (1 - deviation)
         long_averaging_price = self.low * (1 - sideway_height / 2 - deviation)
-        if short_averaging_price <= high_price:
+        
+        # open long order
+        long_stop = self.current_long_open_or_fulfilled_orders[0].stop_price
+        long_order = self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
+        order_info = long_order.get_info()
+        logger.info(
+            f"Averaging long order entry: {order_info}"
+        )
+        self.long_average_order = long_order
+        
+    def evaluate_averaging_orders(self):
+        deviation, _ = self.get_sideway_height_deviation()
+        
+        if self.short_average_order.status == OrderStatus.FULFILLED:
             # change tp in existing short order
             short_averaging_take_profit = self.high * (1 + deviation)
             self.current_short_open_or_fulfilled__orders[0].take_profit_price = short_averaging_take_profit
@@ -273,15 +295,8 @@ class Trader:
             for long_opened_order in self.current_long_open_or_fulfilled_orders:
                 long_opened_order.cancel()
                 long_opened_order.log_order_closed()
-            # open short order
-            short_stop = self.current_short_open_or_fulfilled__orders[0].stop_price
-            short_order = self.place_short_order_with_params(short_averaging_price, short_stop, short_averaging_take_profit)
-            order_info = short_order.get_info()
-            logger.info(
-                f"Averaging short order entry: {order_info}"
-            )
-            
-        if long_averaging_price >= low_price:
+                
+        if self.long_average_order.status == OrderStatus.FULFILLED:
             # change tp in existing long order
             long_averaging_take_profit = self.high * (1 - deviation)
             self.current_long_open_or_fulfilled_orders[0].take_profit_price = long_averaging_take_profit
@@ -289,13 +304,6 @@ class Trader:
             for short_opened_order in self.current_short_open_or_fulfilled__orders:
                 short_opened_order.cancel()
                 short_opened_order.log_order_closed()
-            # open long order
-            long_stop = self.current_long_open_or_fulfilled_orders[0].stop_price
-            long_order = self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
-            order_info = long_order.get_info()
-            logger.info(
-                f"Averaging long order entry: {order_info}"
-            )
 
     def log_order_summary(self):
         logger.info(
