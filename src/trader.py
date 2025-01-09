@@ -255,8 +255,8 @@ class Trader:
             self.cancel_opened_orders_in_sideway()
 
     def calculate_and_place_averaging_order(self, kline):
-        current_opened_long_orders, current_opened_short_orders = self.current_long_open_or_fulfilled_orders, self.current_short_open_or_fulfilled__orders
-        if len(current_opened_long_orders) != 1 or len(current_opened_short_orders) != 1:
+
+        if len(self.current_long_open_or_fulfilled_orders) != 1 or len(self.current_short_open_or_fulfilled__orders) != 1:
             return
 
         deviation, sideway_height = self.get_sideway_height_deviation()
@@ -268,13 +268,13 @@ class Trader:
         if short_averaging_price <= high_price:
             # change tp in existing short order
             short_averaging_take_profit = self.high * (1 + deviation)
-            current_opened_short_orders[0].take_profit_price = short_averaging_take_profit
+            self.current_short_open_or_fulfilled__orders[0].take_profit_price = short_averaging_take_profit
             # cancel long existing orders
-            for long_opened_order in current_opened_long_orders:
+            for long_opened_order in self.current_long_open_or_fulfilled_orders:
                 long_opened_order.cancel()
                 long_opened_order.log_order_closed()
             # open short order
-            short_stop = current_opened_short_orders[0].stop_price
+            short_stop = self.current_short_open_or_fulfilled__orders[0].stop_price
             short_order = self.place_short_order_with_params(short_averaging_price, short_stop, short_averaging_take_profit)
             order_info = short_order.get_info()
             logger.info(
@@ -284,13 +284,13 @@ class Trader:
         if long_averaging_price >= low_price:
             # change tp in existing long order
             long_averaging_take_profit = self.high * (1 - deviation)
-            current_opened_long_orders[0].take_profit_price = long_averaging_take_profit
+            self.current_long_open_or_fulfilled_orders[0].take_profit_price = long_averaging_take_profit
             # cancel short orders
-            for short_opened_order in current_opened_short_orders:
+            for short_opened_order in self.current_short_open_or_fulfilled__orders:
                 short_opened_order.cancel()
                 short_opened_order.log_order_closed()
             # open long order
-            long_stop = current_opened_long_orders[0].stop_price
+            long_stop = self.current_long_open_or_fulfilled_orders[0].stop_price
             long_order = self.place_long_order_with_params(long_averaging_price, long_stop, long_averaging_take_profit)
             order_info = long_order.get_info()
             logger.info(
