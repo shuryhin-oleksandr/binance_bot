@@ -3,6 +3,9 @@ from math import sqrt
 from enum import Enum
 from utils import logger, convert_unix_full_date_str
 
+DEVIATION_PERCENTAGE = 0.05
+
+
 class OrderStatus(Enum):
     OPEN = "open"
     FULFILLED = "fulfilled"
@@ -172,7 +175,7 @@ class Trader:
 
     def get_sideway_height_deviation(self):
         sideway_height = (self.high / self.low) - 1
-        deviation = 0.05 * sideway_height
+        deviation = DEVIATION_PERCENTAGE * sideway_height
         return deviation, sideway_height
 
     def get_short_order_params(self):
