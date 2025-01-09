@@ -122,7 +122,6 @@ class Trader:
         self.sideways_orders = []
         self.high = None
         self.low = None
-        self.mid = None
 
     @property
     def flat_orders(self):
@@ -151,7 +150,11 @@ class Trader:
     @property
     def current_sideway_orders(self):
         return self.sideways_orders[-1] if self.sideways_orders else []
-    
+
+    @property
+    def mid(self):
+        return sqrt(self.high * self.low)
+
     @property
     def current_long_open_or_fulfilled_orders(self):
         is_long = lambda order: order.type == OrderType.LONG
@@ -167,7 +170,6 @@ class Trader:
 
         self.high = high
         self.low = low
-        self.mid = sqrt(high * low)
 
         short_order = self.place_short_order()
         long_order = self.place_long_order()
@@ -182,14 +184,14 @@ class Trader:
         deviation, sideway_height = self.get_sideway_height_deviation()
         short_entry = self.high * (1 + deviation)
         short_stop = self.high * (1 + sideway_height + deviation)
-        short_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
+        short_take_profit = sqrt(self.low * self.high) - deviation
         return short_entry, short_stop, short_take_profit
 
     def get_long_order_params(self):
         deviation, sideway_height = self.get_sideway_height_deviation()
         long_entry = self.low * (1 - deviation)
         long_stop = self.low * (1 - sideway_height - deviation)
-        long_take_profit = sqrt(self.low * self.high) - (0.05 * sideway_height)
+        long_take_profit = sqrt(self.low * self.high) - deviation
         return long_entry, long_stop, long_take_profit
 
     def place_short_order(self):
