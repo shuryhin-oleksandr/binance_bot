@@ -34,6 +34,9 @@ class Order:
         order_investment = 1000  # USDT
         if self.status == OrderStatus.CANCELED or self.status == OrderStatus.OPEN:
             return 0
+        # condition for close last order without close price
+        if not self.close_price:
+            return 0
         if self.type == OrderType.LONG:
             return (self.close_price - self.entry_price) / self.entry_price * order_investment
         # if the order type is short, then the the selling price is entry_price and the buying price is close_price
