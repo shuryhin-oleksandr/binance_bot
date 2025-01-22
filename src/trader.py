@@ -167,7 +167,15 @@ class Trader:
     def current_short_open_or_fulfilled__orders(self):
         is_short = lambda order: order.type == OrderType.SHORT
         return list(filter(is_short, self.current_open_or_fulfilled_orders))
-
+    
+    @property
+    def deviation(self):
+        return DEVIATION_PERCENTAGE * self.sideway_height
+    
+    @property
+    def sideway_height(self):
+        return (self.high / self.low) - 1
+        
     def add_sideway(self, high, low):
         self.sideways_orders.append([])
 
@@ -182,23 +190,16 @@ class Trader:
         self.place_averaging_orders()
         return short_order, long_order
 
-    def get_sideway_height_deviation(self):
-        sideway_height = (self.high / self.low) - 1
-        deviation = DEVIATION_PERCENTAGE * sideway_height
-        return deviation, sideway_height
-
     def get_short_order_params(self):
-        deviation, sideway_height = self.get_sideway_height_deviation()
-        short_entry = self.high * (1 + deviation)
-        short_stop = self.high * (1 + sideway_height + deviation)
-        short_take_profit = sqrt(self.low * self.high) + deviation
+        short_entry = self.high * (1 + self.deviation)
+        short_stop = self.high * (1 + self.sideway_height + self.deviation)
+        short_take_profit = sqrt(self.low * self.high) + self.deviation
         return short_entry, short_stop, short_take_profit
 
     def get_long_order_params(self):
-        deviation, sideway_height = self.get_sideway_height_deviation()
-        long_entry = self.low * (1 - deviation)
-        long_stop = self.low * (1 - sideway_height - deviation)
-        long_take_profit = sqrt(self.low * self.high) - deviation
+        long_entry = self.low * (1 - self.deviation)
+        long_stop = self.low * (1 - self.sideway_height - self.deviation)
+        long_take_profit = sqrt(self.low * self.high) - self.deviation
         return long_entry, long_stop, long_take_profit
 
     def place_short_order(self):
@@ -262,11 +263,10 @@ class Trader:
             self.cancel_opened_orders_in_sideway()
 
     def place_averaging_orders(self):
-        deviation, sideway_height = self.get_sideway_height_deviation()
         
         # open short order
-        short_averaging_take_profit = self.high * (1 + deviation)
-        short_averaging_price = self.high * (1 + sideway_height / 2 + deviation)
+        short_averaging_take_profit = self.high * (1 + self.deviation)
+        short_averaging_price = self.high * (1 + self.sideway_height / 2 + self.deviation)
         short_stop = self.current_short_open_or_fulfilled__orders[0].stop_price
         short_order = self.place_short_order_with_params(short_averaging_price, short_stop, short_averaging_take_profit)
         order_info = short_order.get_info()
@@ -275,8 +275,8 @@ class Trader:
         )
         self.short_average_order = short_order
         
-        long_averaging_take_profit = self.high * (1 - deviation)
-        long_averaging_price = self.low * (1 - sideway_height / 2 - deviation)
+        long_averaging_take_profit = self.high * (1 - self.deviation)
+        long_averaging_price = self.low * (1 - self.sideway_height / 2 - self.deviation)
         
         # open long order
         long_stop = self.current_long_open_or_fulfilled_orders[0].stop_price
@@ -288,11 +288,10 @@ class Trader:
         self.long_average_order = long_order
         
     def evaluate_averaging_orders(self):
-        deviation, _ = self.get_sideway_height_deviation()
         
         if self.short_average_order.status == OrderStatus.FULFILLED:
             # change tp in existing short order
-            short_averaging_take_profit = self.high * (1 + deviation)
+            short_averaging_take_profit = self.high * (1 + self.deviation)
             self.current_short_open_or_fulfilled__orders[0].take_profit_price = short_averaging_take_profit
             # cancel long existing orders
             for long_opened_order in self.current_long_open_or_fulfilled_orders:
@@ -301,7 +300,7 @@ class Trader:
                 
         if self.long_average_order.status == OrderStatus.FULFILLED:
             # change tp in existing long order
-            long_averaging_take_profit = self.high * (1 - deviation)
+            long_averaging_take_profit = self.high * (1 - self.deviation)
             self.current_long_open_or_fulfilled_orders[0].take_profit_price = long_averaging_take_profit
             # cancel short orders
             for short_opened_order in self.current_short_open_or_fulfilled__orders:
