@@ -2,26 +2,23 @@ import yaml
 
 import os
 import logging
-import json
 from datetime import datetime
-from draw_graph import create_graph
 from src.analyzer import PriceAnalyzer
 from src.dispatcher import Dispatcher
 from src.trader import Trader
 from utils import (
     get_unix_timestamp,
     determine_analysis_start_time,
-    convert_unix_to_date_only_str,
-    get_next_file_number,
-    parse_date,
-    serialize_object, )
+    parse_date
+)
 
+from bot import (
+    MONGO_URL,
+    DB_NAME,
+    OUTPUT_DIRECTORY,
+    VisualizationManager
+)
 
-TIME_STEP = 1 * 60 * 1000  # one minute in unix
-MONGO_URL = "mongodb://localhost:27017/"
-DB_NAME = "crypto_data"
-DEVIATION = 0.04
-OUTPUT_DIRECTORY = "analyzed_data"
 
 def load_config(file_path="config.yaml"):
     if os.path.exists(file_path):
@@ -29,60 +26,6 @@ def load_config(file_path="config.yaml"):
             return yaml.safe_load(config_file)
     else:
         return {}
-
-def prepare_kline_plot_data(kline):
-    kline = {  # save only data needed for plotting
-            "status": "",
-            "time": kline["closeTime"],  # save the closeTime as x coordinate to show the kline
-            "price": kline["close"] # save close price as y coordinate
-        }
-    return kline
-
-
-def get_min_price(
-    klines, start_index, last_index
-):  # optimization of the search for the minimum value
-    min_price = klines[start_index]["low"]
-    for j in range(start_index + 1, last_index):
-        if klines[j]["low"] < min_price:
-            min_price = klines[j]["low"]
-    return min_price
-
-
-class VisualizationManager:
-    def __init__(self, output_directory):
-        self.output_directory = output_directory
-        if not os.path.exists(self.output_directory):
-            os.makedirs(self.output_directory)
-
-    def generate_output_file_path(self, file_prefix, symbol, start_time, end_time, file_format=".json"):
-        str_start_time = convert_unix_to_date_only_str(start_time)
-        str_end_time = convert_unix_to_date_only_str(end_time)
-        file_number = get_next_file_number(directory=self.output_directory, format=file_format)
-        return f"{self.output_directory}/{file_number}_{file_prefix}_{symbol}_{str_start_time}_{str_end_time}{file_format}"
-
-    def save_to_json_file(self, data, file_path):
-        with open(file_path, "w") as file:
-            json.dump(data, file, default=serialize_object, indent=4)
-
-    def visualize_data(self, file_path):
-        create_graph(file_path)
-
-    def save_and_visualize(self, analyzed_klines, orders, file_prefix, symbol, start_time, end_time, draw_graph=False):
-        """
-        Save the results to a file, and optionally visualize the data.
-        """
-        output_file = self.generate_output_file_path(
-            file_prefix=file_prefix,
-            symbol=symbol,
-            start_time=start_time,
-            end_time=end_time,
-        )
-
-        self.save_to_json_file({"klines": analyzed_klines, "orders": orders}, output_file)
-
-        if draw_graph:
-            self.visualize_data(output_file)
 
 def process_coin(config, visualization_manager):
     from src.kline_manager import KlineManager
