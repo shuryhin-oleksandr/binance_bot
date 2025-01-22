@@ -1,0 +1,17 @@
+coins:
+  - coin_symbol: "BTCUSDT"
+    growth_percent: 10
+    drop_percent: 5
+    time_window: 24
+    analysis_start_time: "2023-01-01"
+    analysis_end_time: "2024-01-01"
+    real_time: false
+    draw_graph: false
+  - coin_symbol: "ETHUSDT"
+    growth_percent: 15
+    drop_percent: 7
+    time_window: 12
+    analysis_start_time: "2023-01-01"
+    analysis_end_time: null
+    real_time: false
+    draw_graph: false
