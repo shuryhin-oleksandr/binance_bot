@@ -276,7 +276,7 @@ class Trader:
         self.short_two_order = short_two_order
         
         long_two_take_profit = self.high * (1 - self.deviation)
-        long_two_price = self.low * (1 - self.sideway_height / 2 - self.deviation)
+        long_two_price = self.low * (1 - self.sideway_height / 2 + self.deviation)
         
         # open long order
         long_two_stop = self.low * (1 - self.sideway_height - self.deviation)
