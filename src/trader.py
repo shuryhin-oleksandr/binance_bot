@@ -191,7 +191,7 @@ class Trader:
         deviation, sideway_height = self.get_sideway_height_deviation()
         short_entry = self.high * (1 + deviation)
         short_stop = self.high * (1 + sideway_height + deviation)
-        short_take_profit = sqrt(self.low * self.high) - deviation
+        short_take_profit = sqrt(self.low * self.high) + deviation
         return short_entry, short_stop, short_take_profit
 
     def get_long_order_params(self):
