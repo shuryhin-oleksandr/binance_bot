@@ -267,7 +267,7 @@ class Trader:
         # open short order
         short_two_take_profit = self.high * (1 + self.deviation)
         short_two_entry_price = self.high * (1 + self.sideway_height / 2 + self.deviation)
-        short_two_stop = self.current_short_open_or_fulfilled__orders[0].stop_price
+        short_two_stop = self.high * (1 + self.sideway_height + self.deviation)
         short_two_order = self.place_short_order_with_params(short_two_entry_price, short_two_stop, short_two_take_profit)
         order_info = short_two_order.get_info()
         logger.info(
@@ -279,7 +279,7 @@ class Trader:
         long_two_price = self.low * (1 - self.sideway_height / 2 - self.deviation)
         
         # open long order
-        long_two_stop = self.current_long_open_or_fulfilled_orders[0].stop_price
+        long_two_stop = self.low * (1 - self.sideway_height - self.deviation)
         long_two_order = self.place_long_order_with_params(long_two_price, long_two_stop, long_two_take_profit)
         order_info = long_two_order.get_info()
         logger.info(
