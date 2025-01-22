@@ -300,7 +300,7 @@ class Trader:
                 
         if self.long_two_order.status == OrderStatus.FULFILLED:
             # change tp in existing long order
-            long_averaging_take_profit = self.high * (1 - self.deviation)
+            long_averaging_take_profit = self.low * (1 - self.deviation)
             self.current_long_open_or_fulfilled_orders[0].take_profit_price = long_averaging_take_profit
             # cancel short orders
             for short_opened_order in self.current_short_open_or_fulfilled__orders:
