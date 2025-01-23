@@ -3,11 +3,7 @@ import yaml
 import os
 import logging
 
-from bot import (
-    OUTPUT_DIRECTORY,
-    VisualizationManager,
-    process_coin
-)
+from bot import process_coin
 
 
 def load_config(file_path="config.yaml"):
@@ -21,12 +17,11 @@ def main():
     logger = logging.getLogger("root")
     config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     config_data = load_config(config_path)
-    visualization_manager = VisualizationManager(OUTPUT_DIRECTORY)
 
     for coin_config in config_data.get("coins", []):
         
         logger.info(f"Processing {coin_config['coin_symbol']}...")
-        process_coin(coin_config, visualization_manager)
+        process_coin(coin_config)
 
 
 if __name__ == "__main__":

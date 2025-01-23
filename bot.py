@@ -22,7 +22,7 @@ DEVIATION = 0.04
 OUTPUT_DIRECTORY = "analyzed_data"
 
 
-def process_coin(config, visualization_manager):
+def process_coin(config):
     from src.kline_manager import KlineManager
 
     kline_manager = KlineManager(MONGO_URL, DB_NAME, config.get('coin_symbol'))
@@ -153,8 +153,7 @@ def main():
     parser.add_argument("--draw-graph", action="store_true", help="Draw graph")
 
     args = parser.parse_args()
-    visualization_manager = VisualizationManager(OUTPUT_DIRECTORY)
-    process_coin(vars(args), visualization_manager)
+    process_coin(vars(args))
 
 
 if __name__ == "__main__":
