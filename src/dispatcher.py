@@ -67,16 +67,9 @@ class Dispatcher:
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
-                self.trader.new_orders_in_sideway = True
-                self.trader.place_short_order(
+                self.trader.add_sideway(
                     self.analyzer.high_kline["high"],
-                    self.analyzer.low_kline["low"],
-                    self.analyzer.mid_kline["high"],
-                )
-                self.trader.place_long_order(
-                    self.analyzer.high_kline["high"],
-                    self.analyzer.low_kline["low"],
-                    self.analyzer.mid_kline["high"],
+                    self.analyzer.low_kline["low"]
                 )
                 # reset high and low points after finding the middle
                 self.analyzer.reset_klines()
