@@ -41,12 +41,12 @@ def process_coin(config):
     if config.get('real_time'):
         dispatcher.real_time_monitoring()
     else:
-        analysis_end_time = get_unix_timestamp(parse_date(config.get('analysis_end_time'))) if config.get('analysis_end_time') else get_unix_timestamp(datetime.now())
+        analysis_end_time = config.get('analysis_end_time')
         if not config.get('analysis_start_time'):
             # find start time for analysis
             analysis_start_time = determine_analysis_start_time(analysis_end_time,  config.get('time_window'), config.get('coin_symbol'))
         else:
-            analysis_start_time = get_unix_timestamp(datetime.strptime(config.get('analysis_start_time'), '%Y-%m-%d'))
+            analysis_start_time = config.get('analysis_start_time')
 
         dispatcher.set_time_interval(analysis_start_time, analysis_end_time)
 
@@ -142,10 +142,12 @@ def main():
     )
     parser.add_argument(
         "--analysis-start-time",
+        type=parse_date,
         help="Start time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
     parser.add_argument(
         "--analysis-end-time",
+        type=parse_date,
         default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         help="End time in format YYYY-MM-DD HH:MM:SS or YYYY-MM-DD",
     )
@@ -153,6 +155,9 @@ def main():
     parser.add_argument("--draw-graph", action="store_true", help="Draw graph")
 
     args = parser.parse_args()
+
+    args.analysis_end_time = get_unix_timestamp(args.analysis_end_time)
+    args.analysis_start_time = get_unix_timestamp(args.analysis_start_time)
     process_coin(vars(args))
 
 
