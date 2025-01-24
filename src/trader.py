@@ -183,11 +183,8 @@ class Trader:
         self.low = low
         self.short_two_order = None
         self.long_two_order = None
-
-        short_order = self.place_short_order()
-        long_order = self.place_long_order()
         
-        self.place_averaging_orders()
+        short_order, long_order = self.place_orders()
         return short_order, long_order
 
     def get_short_order_params(self):
@@ -283,8 +280,11 @@ class Trader:
                 short_opened_order.cancel()
                 short_opened_order.log_order_closed()
 
-    def place_averaging_orders(self):
-        # open short order
+    def place_orders(self):
+        short_order = self.place_short_order()
+        long_order = self.place_long_order()
+
+        # open short order averaging
         short_two_take_profit = self.high * (1 + self.deviation)
         short_two_entry_price = self.high * (1 + self.sideway_height / 2 + self.deviation)
         short_two_stop = self.high * (1 + self.sideway_height + self.deviation)
@@ -292,13 +292,14 @@ class Trader:
         self.short_two_order = short_two_order
         logger.info(f"Place averaging order: {short_two_order.get_info()}")
         
-        # open long order
+        # open long order averaging
         long_two_take_profit = self.high * (1 - self.deviation)
         long_two_entry_price = self.low * (1 - self.sideway_height / 2 + self.deviation)
         long_two_stop = self.low * (1 - self.sideway_height - self.deviation)
         long_two_order = self.place_long_order_with_params(long_two_entry_price, long_two_stop, long_two_take_profit)
         self.long_two_order = long_two_order
         logger.info(f"Averaging long order entry: {long_two_order.get_info()}")
+        return short_order, long_order
 
     def log_order_summary(self):
         logger.info(
