@@ -19,11 +19,12 @@ class OrderType(Enum):
 
 
 class Order:
-    def __init__(self, type, entry_price, stop_price, take_profit_price):
+    def __init__(self, type, entry_price, stop_price, take_profit_price, description=''):
         self.type = type  # 'short' or 'long'
         self.entry_price = entry_price
         self.stop_price = stop_price
         self.take_profit_price = take_profit_price
+        self.description = description
         self.status = OrderStatus.OPEN
         self.close_time = None
         self.entry_time = None
@@ -181,8 +182,6 @@ class Trader:
 
         self.high = high
         self.low = low
-        self.short_two_order = None
-        self.long_two_order = None
         
         short_order, long_order = self.place_orders()
         return short_order, long_order
@@ -215,13 +214,13 @@ class Trader:
         self.current_sideway_orders.append(order)
         return order
 
-    def place_short_order_with_params(self, entry_price, stop_price, take_profit_price):
-        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price)
+    def place_short_order_with_params(self, entry_price, stop_price, take_profit_price, description):
+        order = Order(OrderType.SHORT, entry_price, stop_price, take_profit_price, description)
         self.current_sideway_orders.append(order)
         return order
 
-    def place_long_order_with_params(self, entry_price, stop_price, take_profit_price):
-        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price)
+    def place_long_order_with_params(self, entry_price, stop_price, take_profit_price, description):
+        order = Order(OrderType.LONG, entry_price, stop_price, take_profit_price, description)
         self.current_sideway_orders.append(order)
         return order
 
@@ -260,7 +259,11 @@ class Trader:
             self.cancel_opened_orders_in_sideway()
         
         # handling averaging orders
-        if self.short_two_order.status == OrderStatus.FULFILLED:
+        short_two_order = next(
+            (order for order in self.current_sideway_orders if order.description == 'second_averaging_short'),
+            None
+        )
+        if short_two_order and short_two_order.status == OrderStatus.FULFILLED:
             # change tp in existing short order
             short_two_take_profit = self.high * (1 + self.deviation)
             first_current_short_open_or_fulfilled__orders = self.current_short_open_or_fulfilled__orders[0]
@@ -269,8 +272,12 @@ class Trader:
             for long_opened_order in self.current_long_open_or_fulfilled_orders:
                 long_opened_order.cancel()
                 long_opened_order.log_order_closed()
-                
-        if self.long_two_order.status == OrderStatus.FULFILLED:
+        
+        long_two_order = next(
+            (order for order in self.current_sideway_orders if order.description == 'second_averaging_long'),
+            None
+        )
+        if long_two_order and long_two_order.status == OrderStatus.FULFILLED:
             # change tp in existing long order
             long_averaging_take_profit = self.low * (1 - self.deviation)
             first_current_long_open_or_fulfilled_orders = self.current_long_open_or_fulfilled_orders[0]
@@ -288,16 +295,14 @@ class Trader:
         short_two_take_profit = self.high * (1 + self.deviation)
         short_two_entry_price = self.high * (1 + self.sideway_height / 2 + self.deviation)
         short_two_stop = self.high * (1 + self.sideway_height + self.deviation)
-        short_two_order = self.place_short_order_with_params(short_two_entry_price, short_two_stop, short_two_take_profit)
-        self.short_two_order = short_two_order
+        short_two_order = self.place_short_order_with_params(short_two_entry_price, short_two_stop, short_two_take_profit, 'second_averaging_short')
         logger.info(f"Place averaging order: {short_two_order.get_info()}")
         
         # open long order averaging
         long_two_take_profit = self.high * (1 - self.deviation)
         long_two_entry_price = self.low * (1 - self.sideway_height / 2 + self.deviation)
         long_two_stop = self.low * (1 - self.sideway_height - self.deviation)
-        long_two_order = self.place_long_order_with_params(long_two_entry_price, long_two_stop, long_two_take_profit)
-        self.long_two_order = long_two_order
+        long_two_order = self.place_long_order_with_params(long_two_entry_price, long_two_stop, long_two_take_profit, 'second_averaging_long')
         logger.info(f"Averaging long order entry: {long_two_order.get_info()}")
         return short_order, long_order
 
