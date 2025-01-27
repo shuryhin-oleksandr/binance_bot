@@ -260,7 +260,7 @@ class Trader:
         
         # handling averaging orders
         short_two_order = next(
-            (order for order in self.current_sideway_orders if order.description == 'second_averaging_short'),
+            (order for order in self.current_sideway_orders if order.description == 'short_two'),
             None
         )
         if short_two_order and short_two_order.status == OrderStatus.FULFILLED:
@@ -274,7 +274,7 @@ class Trader:
                 long_opened_order.log_order_closed()
         
         long_two_order = next(
-            (order for order in self.current_sideway_orders if order.description == 'second_averaging_long'),
+            (order for order in self.current_sideway_orders if order.description == 'long_two'),
             None
         )
         if long_two_order and long_two_order.status == OrderStatus.FULFILLED:
@@ -295,14 +295,14 @@ class Trader:
         short_two_take_profit = self.high * (1 + self.deviation)
         short_two_entry_price = self.high * (1 + self.sideway_height / 2 + self.deviation)
         short_two_stop = self.high * (1 + self.sideway_height + self.deviation)
-        short_two_order = self.place_short_order_with_params(short_two_entry_price, short_two_stop, short_two_take_profit, 'second_averaging_short')
+        short_two_order = self.place_short_order_with_params(short_two_entry_price, short_two_stop, short_two_take_profit, 'short_two')
         logger.info(f"Place averaging order: {short_two_order.get_info()}")
         
         # open long order averaging
         long_two_take_profit = self.high * (1 - self.deviation)
         long_two_entry_price = self.low * (1 - self.sideway_height / 2 + self.deviation)
         long_two_stop = self.low * (1 - self.sideway_height - self.deviation)
-        long_two_order = self.place_long_order_with_params(long_two_entry_price, long_two_stop, long_two_take_profit, 'second_averaging_long')
+        long_two_order = self.place_long_order_with_params(long_two_entry_price, long_two_stop, long_two_take_profit, 'long_two')
         logger.info(f"Averaging long order entry: {long_two_order.get_info()}")
         return short_order, long_order
 
