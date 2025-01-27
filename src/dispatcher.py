@@ -1,8 +1,6 @@
 import time
 from datetime import datetime
 
-from bot import prepare_kline_plot_data
-
 
 class Dispatcher:
     def __init__(self, analyzer, trader, kline_manager):
@@ -15,6 +13,8 @@ class Dispatcher:
         self.analysis_end_time = analysis_end_time
 
     def run_for_historical_data(self):
+        from bot import prepare_kline_plot_data
+
         # Fetch all klines for the analysis period
         klines = self.kline_manager.find_or_fetch_klines_in_range(
             self.analysis_start_time - self.analyzer.time_window,  # Start time with buffer for analysis
@@ -67,16 +67,9 @@ class Dispatcher:
 
             analyzed_kline = self.analyzer._analyze_snapshot(klines, len(klines) - 1)
             if analyzed_kline["status"] == "mid":
-                self.trader.new_orders_in_sideway = True
-                self.trader.place_short_order(
+                self.trader.add_sideway(
                     self.analyzer.high_kline["high"],
-                    self.analyzer.low_kline["low"],
-                    self.analyzer.mid_kline["high"],
-                )
-                self.trader.place_long_order(
-                    self.analyzer.high_kline["high"],
-                    self.analyzer.low_kline["low"],
-                    self.analyzer.mid_kline["high"],
+                    self.analyzer.low_kline["low"]
                 )
                 # reset high and low points after finding the middle
                 self.analyzer.reset_klines()

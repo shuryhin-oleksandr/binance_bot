@@ -1,7 +1,7 @@
 import time
 from pymongo import MongoClient
 from bot import TIME_STEP
-from binance_client import get_klines
+from src.binance_client import get_klines
 from utils import convert_unix_full_date_str, logger
 
 
