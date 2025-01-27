@@ -165,9 +165,35 @@ class Trader:
         return list(filter(is_long, self.current_open_or_fulfilled_orders))
     
     @property
-    def current_short_open_or_fulfilled__orders(self):
+    def current_short_open_or_fulfilled_orders(self):
         is_short = lambda order: order.type == OrderType.SHORT
         return list(filter(is_short, self.current_open_or_fulfilled_orders))
+
+    @property
+    def current_long_fulfilled_orders(self):
+        is_fulfilled = lambda order: order.status == OrderStatus.FULFILLED
+        return list(filter(is_fulfilled, self.current_long_open_or_fulfilled_orders))
+    
+    @property
+    def current_short_fulfilled_orders(self):
+        is_fulfilled = lambda order: order.status == OrderStatus.FULFILLED
+        return list(filter(is_fulfilled, self.current_short_open_or_fulfilled_orders))
+
+    @property
+    def regular_long_fulfilled_order(self):
+        if len(self.current_long_fulfilled_orders) == 1:
+            return self.current_long_fulfilled_orders[0]
+        if self.current_long_fulfilled_orders[0].description == '':
+            return self.current_long_fulfilled_orders[0]
+        return self.current_long_fulfilled_orders[1]
+    
+    @property
+    def regular_short_fulfilled_order(self):
+        if len(self.current_short_fulfilled_orders) == 1:
+            return self.current_short_fulfilled_orders[0]
+        if self.current_short_fulfilled_orders[0].description == '':
+            return self.current_short_fulfilled_orders[0]
+        return self.current_short_fulfilled_orders[1]
     
     @property
     def deviation(self):
@@ -266,8 +292,7 @@ class Trader:
         if short_two_order and short_two_order.status == OrderStatus.FULFILLED:
             # change tp in existing short order
             short_two_take_profit = self.high * (1 + self.deviation)
-            first_current_short_open_or_fulfilled__orders = self.current_short_open_or_fulfilled__orders[0]
-            first_current_short_open_or_fulfilled__orders.take_profit_price = short_two_take_profit
+            self.regular_short_fulfilled_order.take_profit_price = short_two_take_profit
             # cancel long existing orders
             for long_order in self.current_long_open_or_fulfilled_orders:
                 long_order.cancel()
@@ -280,8 +305,7 @@ class Trader:
         if long_two_order and long_two_order.status == OrderStatus.FULFILLED:
             # change tp in existing long order
             long_averaging_take_profit = self.low * (1 - self.deviation)
-            first_current_long_open_or_fulfilled_orders = self.current_long_open_or_fulfilled_orders[0]
-            first_current_long_open_or_fulfilled_orders.take_profit_price = long_averaging_take_profit
+            self.regular_long_fulfilled_order.take_profit_price = long_averaging_take_profit
             # cancel short orders
             for short_order in self.current_short_open_or_fulfilled_orders:
                 short_order.cancel()
