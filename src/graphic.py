@@ -3,6 +3,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
 from datetime import datetime
+from binance_bot.src.trader import OrderStatus
 from utils import convert_unix_full_date_str
 
 matplotlib.use("TkAgg")
@@ -67,8 +68,9 @@ class Graphic:
             self.current_page += 1
             self.paginate_plot()
 
-    def create_plot_for_historical_data(self, all_points):
+    def create_plot_for_historical_data(self, all_points, orders):
         self.all_points = all_points
+        self.orders = orders
         self.x_data = []
         self.y_data = []
 
@@ -165,6 +167,56 @@ class Graphic:
 
         for point in mid_points:
             self._plot_last_point(point, color="orange", label="Mid:", markersize=4)
+
+        current_page_start_time = self.x_data[start_idx]
+        current_page_end_time = self.x_data[end_idx - 1]
+
+        for order in self.orders:
+            if order.get('status').get('_value_') != OrderStatus.CANCELED.value:
+                
+                if order.get('entry_time'):
+                    entry_time = datetime.strptime(
+                        convert_unix_full_date_str(order.get('entry_time')), "%Y-%m-%d %H:%M:%S"
+                    )
+                    if current_page_start_time <= entry_time <= current_page_end_time:
+                        self.ax.plot(
+                            entry_time,
+                            order.get('entry_price'),
+                            marker="^",
+                            color="blue",
+                            markersize=6,
+                            label="Entry" if "Entry" not in self.ax.get_legend_handles_labels()[1] else None,
+                        )
+                        self.ax.text(
+                            entry_time,
+                            order.get('entry_price'),
+                            f"Entry: {order.get('entry_price')}",
+                            fontsize=8,
+                            verticalalignment="bottom",
+                        )
+
+                if order.get('status').get('_value_') == OrderStatus.CLOSED.value:
+                    
+                    if order.get('close_time'):
+                        close_time = datetime.strptime(
+                            convert_unix_full_date_str(order.get('close_time')), "%Y-%m-%d %H:%M:%S"
+                        )
+                        if current_page_start_time <= close_time <= current_page_end_time:
+                            self.ax.plot(
+                                close_time,
+                                order.get('close_price'),
+                                marker="v",
+                                color="red",
+                                markersize=6,
+                                label="Exit" if "Exit" not in self.ax.get_legend_handles_labels()[1] else None,
+                            )
+                            self.ax.text(
+                                close_time,
+                                order.get('close_price'),
+                                f"Exit: {order.get('close_price')}",
+                                fontsize=8,
+                                verticalalignment="top",
+                            )
 
         self.ax.relim()
         self.ax.autoscale_view()

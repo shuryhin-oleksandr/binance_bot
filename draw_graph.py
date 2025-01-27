@@ -11,7 +11,7 @@ def create_graph(json_file):
         klines = data.get("klines", [])
         orders = data.get("orders", [])
 
-        graphic.create_plot_for_historical_data(klines)
+        graphic.create_plot_for_historical_data(klines, orders)
 
 
 if __name__ == "__main__":
