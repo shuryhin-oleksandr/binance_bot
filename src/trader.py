@@ -269,9 +269,9 @@ class Trader:
             first_current_short_open_or_fulfilled__orders = self.current_short_open_or_fulfilled__orders[0]
             first_current_short_open_or_fulfilled__orders.take_profit_price = short_two_take_profit
             # cancel long existing orders
-            for long_opened_order in self.current_long_open_or_fulfilled_orders:
-                long_opened_order.cancel()
-                long_opened_order.log_order_closed()
+            for long_order in self.current_long_open_or_fulfilled_orders:
+                long_order.cancel()
+                long_order.log_order_closed()
         
         long_two_order = next(
             (order for order in self.current_sideway_orders if order.description == 'long_two'),
@@ -283,9 +283,9 @@ class Trader:
             first_current_long_open_or_fulfilled_orders = self.current_long_open_or_fulfilled_orders[0]
             first_current_long_open_or_fulfilled_orders.take_profit_price = long_averaging_take_profit
             # cancel short orders
-            for short_opened_order in self.current_short_open_or_fulfilled__orders:
-                short_opened_order.cancel()
-                short_opened_order.log_order_closed()
+            for short_order in self.current_short_open_or_fulfilled_orders:
+                short_order.cancel()
+                short_order.log_order_closed()
 
     def place_orders(self):
         short_order = self.place_short_order()
